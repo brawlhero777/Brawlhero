@@ -2369,8 +2369,10 @@ function tryShoot(){
   if(keys["arrowup"])ky-=1;if(keys["arrowdown"])ky+=1;
   if(kx!==0||ky!==0){const l=Math.sqrt(kx*kx+ky*ky);ax=kx/l;ay=ky/l;}
   if(Math.abs(ax)<0.01&&Math.abs(ay)<0.01)return;
-  // player bullets tagged fromPlayer=true
-  bullets.push({x:playerX,y:playerY,vx:ax*10,vy:ay*10,life:1,dist:0,fromPlayer:true});
+  const shotR=heroes[selected].shot.r;
+  // maxDist: r=5→150px, r=11→250px (linéaire)
+  const maxDist=100+shotR*(150/11);
+  bullets.push({x:playerX,y:playerY,vx:ax*10,vy:ay*10,life:1,dist:0,fromPlayer:true,maxDist});
 }
 
 // ===================== START =====================
@@ -2718,7 +2720,12 @@ function update(dt){
       if(b.y<10||b.y>H-10){b.vy*=-1;b.bounces--;spawnParticles(b.x,b.y,"#d4a259",3);}
     }
   }
-  bullets=bullets.filter(b=>b.x>-100&&b.x<WORLD_W+100&&b.y>-100&&b.y<WORLD_H+100&&b.dist<620&&(!b.isRicochet||b.bounces>=0));
+  bullets=bullets.filter(b=>{
+    if(b.x<-100||b.x>WORLD_W+100||b.y<-100||b.y>WORLD_H+100) return false;
+    if(b.isRicochet&&b.bounces<0) return false;
+    const limit=b.maxDist||620;
+    return b.dist<limit;
+  });
 
   // Enemy AI: Battle Royale — each enemy wants to WIN (kill others, stay alive)
   for(let en of enemies){
@@ -3180,7 +3187,7 @@ function activateSuper(){
       superFlash("#38b000","0.2");
       for(let a=0;a<12;a++){
         const ang=a*Math.PI*2/12;
-        bullets.push({x:playerX,y:playerY,vx:Math.cos(ang)*11,vy:Math.sin(ang)*11,life:1,dist:0,fromPlayer:true});
+        bullets.push({x:playerX,y:playerY,vx:Math.cos(ang)*10,vy:Math.sin(ang)*10,life:1,dist:0,fromPlayer:true});
       }
       break;
     }
@@ -3188,7 +3195,7 @@ function activateSuper(){
       superFlash("#f3722c","0.3");
       for(let a=0;a<20;a++){
         const ang=a*Math.PI*2/20;
-        bullets.push({x:playerX,y:playerY,vx:Math.cos(ang)*9,vy:Math.sin(ang)*9,life:1,dist:0,fromPlayer:true});
+        bullets.push({x:playerX,y:playerY,vx:Math.cos(ang)*10,vy:Math.sin(ang)*10,life:1,dist:0,fromPlayer:true});
       }
       spawnParticles(playerX,playerY,"#f3722c",25);
       break;
@@ -3203,7 +3210,7 @@ function activateSuper(){
       const baseAng=Math.atan2(rjDY||0,rjDX||1);
       for(let i=-2;i<=2;i++){
         const a=baseAng+i*0.2;
-        bullets.push({x:playerX,y:playerY,vx:Math.cos(a)*11,vy:Math.sin(a)*11,life:1,dist:0,fromPlayer:true});
+        bullets.push({x:playerX,y:playerY,vx:Math.cos(a)*10,vy:Math.sin(a)*10,life:1,dist:0,fromPlayer:true});
       }
       break;
     }
@@ -3496,7 +3503,7 @@ function activateSuper(){
           for(let a=0;a<14;a++){
             const ang=a*Math.PI*2/14+(wave*Math.PI/14);
             const col=rainbowColors[a%rainbowColors.length];
-            bullets.push({x:playerX,y:playerY,vx:Math.cos(ang)*9,vy:Math.sin(ang)*9,
+            bullets.push({x:playerX,y:playerY,vx:Math.cos(ang)*10,vy:Math.sin(ang)*10,
               life:1,dist:0,fromPlayer:true,rainbowColor:col});
           }
           spawnParticles(playerX,playerY,rainbowColors[wave],10);
@@ -3517,7 +3524,7 @@ function activateSuper(){
       const baseAng2=Math.atan2(rjDY||0,rjDX||1);
       for(let i=-3;i<=3;i++){
         const a=baseAng2+i*0.18;
-        const rb={x:playerX,y:playerY,vx:Math.cos(a)*13,vy:Math.sin(a)*13,
+        const rb={x:playerX,y:playerY,vx:Math.cos(a)*10,vy:Math.sin(a)*10,
           life:1,dist:0,fromPlayer:true,bounces:4,isRicochet:true};
         bullets.push(rb);
       }
@@ -4385,13 +4392,31 @@ function draw(){
   // Player
   draw3DHero(ctx, playerX, playerY, 22, heroes[selected].emoji, heroColor, true);
 
-  // Aim line
+  // Aim line — cercles espacés = taille et portée de la balle du héros
   const aimLen=Math.sqrt(rjDX*rjDX+rjDY*rjDY);
   if(aimLen>JOY_DEAD){
-    ctx.save();ctx.globalAlpha=0.3;ctx.strokeStyle=heroColor;ctx.lineWidth=2;
-    ctx.setLineDash([6,6]);
-    ctx.beginPath();ctx.moveTo(playerX,playerY);
-    ctx.lineTo(playerX+rjDX*80,playerY+rjDY*80);ctx.stroke();ctx.restore();
+    ctx.save();
+    const shotR=heroes[selected].shot.r;
+    const maxDist=100+shotR*(150/11);
+    const nx=rjDX/aimLen, ny=rjDY/aimLen;
+    const spacing=shotR*3.5; // espacement entre cercles
+    const numDots=Math.floor(maxDist/spacing);
+    for(let i=1;i<=numDots;i++){
+      const t=i/numDots; // 0→1 (plus loin = plus transparent)
+      const cx2=playerX+nx*spacing*i;
+      const cy2=playerY+ny*spacing*i;
+      const alpha=(1-t*0.7)*0.6;
+      const r=shotR*(0.7+t*0.3); // légèrement plus grand en s'éloignant
+      ctx.globalAlpha=alpha;
+      ctx.shadowBlur=12; ctx.shadowColor=heroColor;
+      ctx.fillStyle=heroColor;
+      ctx.beginPath(); ctx.arc(cx2,cy2,r,0,Math.PI*2); ctx.fill();
+      // highlight intérieur
+      ctx.globalAlpha=alpha*0.4;
+      ctx.fillStyle="#fff";
+      ctx.beginPath(); ctx.arc(cx2-r*0.25,cy2-r*0.25,r*0.35,0,Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
   }
 
   // Joysticks
@@ -5359,30 +5384,129 @@ let _audioUnlocked=false;
   const pct=document.getElementById("loading-pct");
   const enter=document.getElementById("loading-enter");
   const dots=document.getElementById("loading-dots");
-  if(!fill||!pct||!enter) return;
 
-  // Chargement rapide : 0% → 100% en ~1.2s puis affiche le bouton
-  let progress = 0;
-  const duration = 1200;
-  const start = performance.now();
+  const messages=[
+    {at:0,   text:"Initialisation du moteur…"},
+    {at:12,  text:"Chargement des héros…"},
+    {at:28,  text:"Préparation des maps…"},
+    {at:45,  text:"Chargement des sons…"},
+    {at:60,  text:"Génération de l'arène…"},
+    {at:75,  text:"Synchronisation des données…"},
+    {at:88,  text:"Finalisation…"},
+    {at:97,  text:"Presque prêt…"},
+  ];
 
-  function tick(ts){
-    const elapsed = ts - start;
-    progress = Math.min(100, (elapsed / duration) * 100);
-    fill.style.width = progress + "%";
-    pct.textContent = Math.floor(progress) + "%";
-    if(progress < 100){
-      requestAnimationFrame(tick);
+  // Durée totale aléatoire entre 4s et 15s
+  const totalMs = 4000 + Math.random() * 11000;
+
+  // Génère des "checkpoints" de progression avec des vitesses irrégulières
+  // Parfois ça bloque (stall), parfois ça avance vite, parfois lentement
+  let checkpoints = [];
+  let t = 0;
+  let p = 0;
+  while(p < 100){
+    const roll = Math.random();
+    if(roll < 0.18 && p > 5 && p < 90){
+      // BLOCAGE : reste coincé pendant 0.5 à 3 secondes
+      const stallDur = 500 + Math.random() * 2500;
+      checkpoints.push({time: t, prog: p, stall: true});
+      t += stallDur;
+      checkpoints.push({time: t, prog: p, stall: false});
     } else {
-      fill.style.width = "100%";
-      pct.textContent = "100%";
-      if(dots) dots.textContent = "";
-      setTimeout(()=>{
-        enter.style.display = "block";
-        if(dots) dots.style.display = "none";
-      }, 200);
+      // Avance d'un bout variable (1% à 18%)
+      const chunk = 1 + Math.random() * 17;
+      const newP = Math.min(100, p + chunk);
+      // Vitesse variable : parfois rapide, parfois lente
+      const speed = 0.3 + Math.random() * 2.2; // px/%ms relatif
+      const dur = (chunk / 100) * totalMs * speed * (0.4 + Math.random() * 0.8);
+      t += Math.max(80, dur);
+      p = newP;
+      checkpoints.push({time: t, prog: p, stall: false});
     }
   }
+
+  // Normalise les temps pour coller à totalMs
+  const rawTotal = checkpoints[checkpoints.length-1].time;
+  const scale = totalMs / rawTotal;
+  checkpoints = checkpoints.map(c => ({...c, time: c.time * scale}));
+
+  let startTime = null;
+  let cpIndex = 0;
+  let currentProgress = 0;
+  let lastMsg = "";
+  let blinkInterval = null;
+  let isStalling = false;
+
+  function getMsg(prog){
+    let msg = messages[0].text;
+    for(let m of messages){ if(prog >= m.at) msg = m.text; }
+    return msg;
+  }
+
+  function startBlinking(text){
+    if(blinkInterval) clearInterval(blinkInterval);
+    let show = true;
+    dots.textContent = text;
+    blinkInterval = setInterval(()=>{
+      show = !show;
+      dots.textContent = show ? text : text.replace("…","") + " ·";
+    }, 420);
+  }
+
+  function stopBlinking(text){
+    if(blinkInterval){ clearInterval(blinkInterval); blinkInterval = null; }
+    dots.textContent = text;
+  }
+
+  function tick(ts){
+    if(!startTime) startTime = ts;
+    const elapsed = ts - startTime;
+
+    // Avance dans les checkpoints
+    while(cpIndex < checkpoints.length && checkpoints[cpIndex].time <= elapsed){
+      currentProgress = checkpoints[cpIndex].prog;
+      isStalling = (cpIndex + 1 < checkpoints.length &&
+                    checkpoints[cpIndex+1].prog === checkpoints[cpIndex].prog);
+      cpIndex++;
+    }
+
+    // Interpolation douce entre deux checkpoints
+    let displayProg = currentProgress;
+    if(cpIndex < checkpoints.length){
+      const prev = cpIndex > 0 ? checkpoints[cpIndex-1] : {time:0, prog:0};
+      const next = checkpoints[cpIndex];
+      if(next.prog !== prev.prog){
+        const ratio = Math.max(0, Math.min(1, (elapsed - prev.time) / (next.time - prev.time)));
+        displayProg = prev.prog + (next.prog - prev.prog) * ratio;
+      }
+    }
+
+    displayProg = Math.min(100, displayProg);
+    fill.style.width = displayProg + "%";
+    pct.textContent = Math.floor(displayProg) + "%";
+
+    // Message avec effet blink si blocage
+    const msg = getMsg(displayProg);
+    if(isStalling && displayProg < 99){
+      if(msg !== lastMsg || !blinkInterval) startBlinking(msg);
+    } else {
+      if(msg !== lastMsg){ stopBlinking(msg); lastMsg = msg; }
+    }
+
+    if(elapsed < totalMs || displayProg < 100){
+      requestAnimationFrame(tick);
+    } else {
+      stopBlinking("");
+      fill.style.width = "100%";
+      pct.textContent = "100%";
+      dots.textContent = "";
+      setTimeout(()=>{
+        enter.style.display = "block";
+        dots.style.display = "none";
+      }, 350);
+    }
+  }
+
   requestAnimationFrame(tick);
 })();
 
@@ -5706,17 +5830,17 @@ window.addEventListener("load",()=>{
 
 // ── Logout ──────────────────────────────────────────────────────────
 function startAccBgAnim(){
-  const accCanvas=document.getElementById("acc-bg-canvas");
-  if(!accCanvas) return;
-  const c=accCanvas.getContext("2d");
-  accCanvas.width=window.innerWidth; accCanvas.height=window.innerHeight;
-  const stars=Array.from({length:100},()=>({x:Math.random()*accCanvas.width,y:Math.random()*accCanvas.height,r:Math.random()*1.8+0.2,alpha:Math.random(),speed:Math.random()*0.4+0.1}));
-  const particles2=Array.from({length:18},()=>({x:Math.random()*accCanvas.width,y:accCanvas.height+20,r:Math.random()*3+1,vy:-(Math.random()*0.4+0.2),vx:(Math.random()-0.5)*0.3,color:Math.random()<0.5?"#f9c74f":"#4cc9f0",alpha:Math.random()*0.5+0.3}));
+  const canvas=document.getElementById("acc-bg-canvas");
+  if(!canvas) return;
+  const c=canvas.getContext("2d");
+  canvas.width=window.innerWidth; canvas.height=window.innerHeight;
+  const stars=Array.from({length:100},()=>({x:Math.random()*canvas.width,y:Math.random()*canvas.height,r:Math.random()*1.8+0.2,alpha:Math.random(),speed:Math.random()*0.4+0.1}));
+  const particles2=Array.from({length:18},()=>({x:Math.random()*canvas.width,y:canvas.height+20,r:Math.random()*3+1,vy:-(Math.random()*0.4+0.2),vx:(Math.random()-0.5)*0.3,color:Math.random()<0.5?"#f9c74f":"#4cc9f0",alpha:Math.random()*0.5+0.3}));
   function animAcc(){
     if(document.getElementById("account-screen").style.display==="none") return;
-    c.clearRect(0,0,accCanvas.width,accCanvas.height);
+    c.clearRect(0,0,canvas.width,canvas.height);
     for(let s of stars){ s.alpha+=s.speed*0.04; if(s.alpha>1)s.alpha=0; c.globalAlpha=Math.sin(s.alpha*Math.PI)*0.65; c.fillStyle="#fff"; c.beginPath(); c.arc(s.x,s.y,s.r,0,Math.PI*2); c.fill(); }
-    for(let p of particles2){ p.x+=p.vx; p.y+=p.vy; if(p.y<-10){p.y=accCanvas.height+10;p.x=Math.random()*accCanvas.width;} c.globalAlpha=p.alpha*0.6; c.fillStyle=p.color; c.shadowBlur=12; c.shadowColor=p.color; c.beginPath(); c.arc(p.x,p.y,p.r,0,Math.PI*2); c.fill(); c.shadowBlur=0; }
+    for(let p of particles2){ p.x+=p.vx; p.y+=p.vy; if(p.y<-10){p.y=canvas.height+10;p.x=Math.random()*canvas.width;} c.globalAlpha=p.alpha*0.6; c.fillStyle=p.color; c.shadowBlur=12; c.shadowColor=p.color; c.beginPath(); c.arc(p.x,p.y,p.r,0,Math.PI*2); c.fill(); c.shadowBlur=0; }
     c.globalAlpha=1;
     requestAnimationFrame(animAcc);
   }
