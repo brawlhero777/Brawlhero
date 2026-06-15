@@ -5294,62 +5294,8 @@ window.redeemCode=redeemCode;
 window.confirmReset=confirmReset;
 window.cancelReset=cancelReset;
 
-// ===================== VOICE SYSTEM =====================
-const HERO_VOICES = {
-  "Aventurier": { start:["C'est l'heure du combat !","Allons-y !","Je suis prêt !"], kill:["Trop facile !","À la prochaine !","Sayonara !"], super:["Dash éclair !","Vous ne m'aurez pas !"], die:["Nooon...","Je reviendrai !"] },
-  "Mage":       { start:["Les étoiles me guident.","La magie commence !","Que le sort soit jeté !"], kill:["Insensé !","Poussière d'étoiles !","Magie noire !"], super:["Pluie de météores !","Que le ciel tombe !"], die:["Ma magie... s'éteint..."] },
-  "Robot":      { start:["Système activé.","Protocole combat initialisé.","Cibles détectées."], kill:["Cible éliminée.","Neutralisé.","Procédure terminée."], super:["Bouclier activé.","Blindage maximum."], die:["Système en panne..."] },
-  "Ninja":      { start:["L'ombre frappe d'abord.","Silencieux comme la mort."], kill:["Comme un souffle.","Invisible.","Fantôme."], super:["Double ninja !","L'illusion frappe !"], die:["Un ninja ne meurt jamais vraiment..."] },
-  "Dragon":     { start:["Je vais tout brûler !","La flamme s'éveille !"], kill:["Réduit en cendres !","Brûle !","Feu !"], super:["Vague de feu !","Tout brûle sur mon passage !"], die:["Ma flamme s'éteint..."] },
-  "Fantôme":    { start:["Je suis déjà mort...","Les vivants ne m'effraient pas."], kill:["Rejoins l'au-delà.","Ectoplasme !"], super:["Invisibilité !","Tu ne peux pas me voir !"], die:["Je retourne dans les ténèbres..."] },
-  "Elfe":       { start:["La forêt m'appelle.","Flèches prêtes !"], kill:["Dans le mille !","Vise juste !"], super:["Volée de flèches !","Pluie mortelle !"], die:["La forêt pleure..."] },
-  "Lion":       { start:["Je suis le roi !","Que le rugissement commence !"], kill:["Qui est le suivant ?","Pour le roi !"], super:["Rugissement !","Tremblez devant moi !"], die:["Le roi tombe..."] },
-  "Glaciateur": { start:["Tout va geler.","Bienvenue dans le blizzard."], kill:["Congelé !","Zéro absolu !"], super:["Blizzard total !","Le froid règne !"], die:["Je fond..."] },
-  "Météore":    { start:["Je suis venu des étoiles !","Impact imminent !"], kill:["Cratère !","Impacté !"], super:["Impact de météore !","Collision directe !"], die:["Je retourne dans l'espace..."] },
-  "Sirène":     { start:["Les profondeurs m'appartiennent.","L'océan se déchaîne !"], kill:["Emporté par les vagues !","Noyé !"], super:["Tsunami !","Vague dévastatrice !"], die:["La mer me reprend..."] },
-  "Éclair":     { start:["Plus vite que la foudre !","Chargé à bloc !"], kill:["Électrocuté !","Court-circuit !"], super:["Tempête électrique !","Dix mille volts !"], die:["Court-circuit fatal..."] },
-  "Ours":       { start:["GRAAAAAAR !","Personne ne m'arrête !"], kill:["Grizzly power !","Écrasé !"], super:["Rage grizzly !","Je suis en FURIE !"], die:["L'ours s'endort..."] },
-  "Volcan":     { start:["La lave coule !","Éruption imminente !"], kill:["En fusion !","Brûlé vif !"], super:["Éruption !","Le volcan explose !"], die:["Je me refroidis..."] },
-  "Magnéto":    { start:["Le magnétisme m'obéit.","Attraction fatale."], kill:["Attiré dans le néant !","Polarisé !"], super:["Attraction !","Tout vient à moi !"], die:["Le champ s'effondre..."] },
-  "Vampire":    { start:["Votre sang m'appartient.","La nuit commence."], kill:["Délicieux !","Drainé !","Savoureux..."], super:["Drain de vie !","Je me nourris de vous !"], die:["La lumière... non..."] },
-  "Golem":      { start:["BOUM BOUM BOUM.","La terre tremble."], kill:["Écrasé sous mes pieds !","Poussière !"], super:["Tremblement !","La terre se soulève !"], die:["Je retourne à la roche..."] },
-  "Zombie":     { start:["Cerveaux... cerveaux...","Je reviens toujours."], kill:["Contaminé !","Un de plus dans ma horde !"], super:["Nuage de poison !","Pourriture !"], die:["Uggghhhh..."] },
-  "Tornade":    { start:["Je tourbillonne !","Accrochez-vous !"], kill:["Emporté !","Aspiré !"], super:["Tornade géante !","Tout aspire !"], die:["Le vent s'arrête..."] },
-  "Titan":      { start:["Je suis INVINCIBLE !","Le jugement commence.","Tremblez, mortels !"], kill:["JUGEMENT FINAL !","NÉANT !","Jugé et condamné !"], super:["Jugement final !","L'apocalypse commence !"], die:["Impossible... je suis le Titan..."] },
-  "L'Inconnu": { start:["...","Je suis partout.","Tu ne peux pas me comprendre."], kill:["Chaos.","Entropie.","Disparaît."], super:["Chaos absolu !","Réalité brisée !"], die:["Je n'ai jamais existé..."] },
-};
-
-let voiceEnabled = true;
-let lastVoiceTime = 0;
-
-function speak(text, color){
-  if(!voiceEnabled) return;
-  const now = Date.now();
-  if(now - lastVoiceTime < 1200) return; // avoid overlap spam
-  lastVoiceTime = now;
-  try{
-    const utt = new SpeechSynthesisUtterance(text);
-    utt.lang = "fr-FR";
-    utt.volume = 0.85;
-    utt.rate = 1.05 + Math.random() * 0.15;
-    utt.pitch = 1.0 + Math.random() * 0.2 - 0.1;
-    // Try to pick a French voice
-    const voices = speechSynthesis.getVoices();
-    const frVoice = voices.find(v => v.lang && v.lang.startsWith("fr"));
-    if(frVoice) utt.voice = frVoice;
-    speechSynthesis.cancel();
-    speechSynthesis.speak(utt);
-  } catch(e){}
-}
-
-function heroVoice(type){
-  const h = heroes[selected];
-  const lines = HERO_VOICES[h.name];
-  if(!lines) return;
-  const pool = lines[type];
-  if(!pool || !pool.length) return;
-  speak(pool[Math.floor(Math.random() * pool.length)], h.color);
-}
+// ===================== VOICE SYSTEM (disabled) =====================
+function heroVoice(type){}
 
 
 let _audioUnlocked=false;
