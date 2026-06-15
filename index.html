@@ -2370,7 +2370,6 @@ function tryShoot(){
   if(kx!==0||ky!==0){const l=Math.sqrt(kx*kx+ky*ky);ax=kx/l;ay=ky/l;}
   if(Math.abs(ax)<0.01&&Math.abs(ay)<0.01)return;
   const shotR=heroes[selected].shot.r;
-  // maxDist: r=5→150px, r=11→250px (linéaire)
   const maxDist=100+shotR*(150/11);
   bullets.push({x:playerX,y:playerY,vx:ax*10,vy:ay*10,life:1,dist:0,fromPlayer:true,maxDist});
 }
@@ -2723,8 +2722,7 @@ function update(dt){
   bullets=bullets.filter(b=>{
     if(b.x<-100||b.x>WORLD_W+100||b.y<-100||b.y>WORLD_H+100) return false;
     if(b.isRicochet&&b.bounces<0) return false;
-    const limit=b.maxDist||620;
-    return b.dist<limit;
+    return b.dist<(b.maxDist||620);
   });
 
   // Enemy AI: Battle Royale — each enemy wants to WIN (kill others, stay alive)
@@ -2913,7 +2911,7 @@ function update(dt){
     if(en.shootTimer<=0){
       en.shootTimer=en.shootCd[0]+Math.random()*(en.shootCd[1]-en.shootCd[0]);
       if(distToTarget<en.rangeMax+60){
-        const bvx=Math.cos(angToTarget)*7.5,bvy=Math.sin(angToTarget)*7.5;
+        const bvx=Math.cos(angToTarget)*10,bvy=Math.sin(angToTarget)*10;
         bullets.push({x:en.x,y:en.y,vx:bvx,vy:bvy,life:1,dist:0,fromPlayer:false,
           fromEnemy:en,dmg:en.dmg*0.55,color:en.color});
         en._lastShot=performance.now();
@@ -4392,29 +4390,26 @@ function draw(){
   // Player
   draw3DHero(ctx, playerX, playerY, 22, heroes[selected].emoji, heroColor, true);
 
-  // Aim line — cercles espacés = taille et portée de la balle du héros
+  // Aim line — cercles de la taille de la balle, portée du héros
   const aimLen=Math.sqrt(rjDX*rjDX+rjDY*rjDY);
   if(aimLen>JOY_DEAD){
     ctx.save();
     const shotR=heroes[selected].shot.r;
     const maxDist=100+shotR*(150/11);
     const nx=rjDX/aimLen, ny=rjDY/aimLen;
-    const spacing=shotR*3.5; // espacement entre cercles
-    const numDots=Math.floor(maxDist/spacing);
+    const spacing=shotR*3.2;
+    const numDots=Math.max(1,Math.floor(maxDist/spacing));
     for(let i=1;i<=numDots;i++){
-      const t=i/numDots; // 0→1 (plus loin = plus transparent)
+      const t=i/numDots;
       const cx2=playerX+nx*spacing*i;
       const cy2=playerY+ny*spacing*i;
-      const alpha=(1-t*0.7)*0.6;
-      const r=shotR*(0.7+t*0.3); // légèrement plus grand en s'éloignant
-      ctx.globalAlpha=alpha;
-      ctx.shadowBlur=12; ctx.shadowColor=heroColor;
+      ctx.globalAlpha=(1-t*0.65)*0.55;
+      ctx.shadowBlur=10; ctx.shadowColor=heroColor;
       ctx.fillStyle=heroColor;
-      ctx.beginPath(); ctx.arc(cx2,cy2,r,0,Math.PI*2); ctx.fill();
-      // highlight intérieur
-      ctx.globalAlpha=alpha*0.4;
+      ctx.beginPath(); ctx.arc(cx2,cy2,shotR,0,Math.PI*2); ctx.fill();
+      ctx.globalAlpha*=0.4;
       ctx.fillStyle="#fff";
-      ctx.beginPath(); ctx.arc(cx2-r*0.25,cy2-r*0.25,r*0.35,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx2-shotR*0.28,cy2-shotR*0.28,shotR*0.32,0,Math.PI*2); ctx.fill();
     }
     ctx.restore();
   }
