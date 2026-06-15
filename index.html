@@ -2383,7 +2383,6 @@ function startGame(){
   _audioUnlocked=true;
   playMapMusic(selectedMap.id);
   resize();initGame();
-  setTimeout(()=>heroVoice("start"), 600);
 }
 
 const ENEMY_TYPES=[
@@ -3082,7 +3081,6 @@ function killEnemy(en){
   sessionCoins+=c;money+=c;
   document.getElementById("live-coins").textContent=sessionCoins;
   updateHUD();updateUI();
-  if(Math.random()<0.5) heroVoice("kill");
   if(typeof mpOnKill==="function") mpOnKill(en);
 }
 
