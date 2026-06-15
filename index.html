@@ -523,6 +523,17 @@ canvas{display:block;touch-action:none;}
 .lb-emoji{font-size:28px;}
 .lb-name{flex:1;font-size:14px;font-weight:700;}
 .lb-trophies{font-family:'Boogaloo',cursive;font-size:18px;color:#f9c74f;}
+/* Leaderboard tabs */
+#lb-tabs{display:flex;gap:8px;margin-bottom:14px;}
+.lb-tab{flex:1;padding:9px 0;border:1.5px solid rgba(255,255,255,.15);border-radius:20px;background:rgba(255,255,255,.05);color:#a0a0c0;font-family:'Boogaloo',cursive;font-size:15px;cursor:pointer;transition:.15s;text-align:center;}
+.lb-tab.active{border-color:#f9c74f;background:rgba(249,199,79,.12);color:#f9c74f;}
+#lb-hero-picker{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:14px;}
+.lb-hero-btn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 10px;border:1.5px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(255,255,255,.05);cursor:pointer;transition:.15s;min-width:54px;}
+.lb-hero-btn:hover{background:rgba(255,255,255,.12);}
+.lb-hero-btn.selected{border-color:var(--hc,#f9c74f);background:rgba(255,255,255,.1);box-shadow:0 0 10px var(--hc,#f9c74f44);}
+.lb-hero-btn .lhb-emoji{font-size:26px;line-height:1;}
+.lb-hero-btn .lhb-name{font-size:9px;color:#a0a0c0;font-family:'Nunito',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52px;text-align:center;}
+.lb-hero-btn.selected .lhb-name{color:#fff;}
 /* ===== PROFILE BUTTON (top-left menu) ===== */
 #menu-profile-btn{
   display:flex;align-items:center;gap:6px;
@@ -663,17 +674,37 @@ canvas{display:block;touch-action:none;}
 <!-- PANNEAU CLASSEMENT -->
 <div id="panel-leaderboard" style="display:none;position:fixed;inset:0;background:rgba(10,10,30,.97);color:#fff;z-index:50000;overflow-y:auto;">
   <div style="max-width:480px;margin:0 auto;padding:28px 20px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-      <h2 style="font-family:'Boogaloo',cursive;font-size:36px;color:#f9c74f;">🌍 Classement Mondial</h2>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <h2 style="font-family:'Boogaloo',cursive;font-size:36px;color:#f9c74f;">🌍 Classement</h2>
       <button onclick="closeAllPanels()" style="background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.3);color:#fff;font-size:20px;width:42px;height:42px;border-radius:50%;cursor:pointer;font-weight:bold;">✕</button>
     </div>
-    <div id="lb-status" style="text-align:center;font-size:12px;color:#a0a0c0;margin-bottom:16px;min-height:18px;"></div>
-    <div id="leaderboard-list"></div>
-    <div style="text-align:center;margin-top:16px;">
-      <button onclick="renderLeaderboard()" id="lb-refresh-btn"
-        style="background:rgba(76,201,240,.15);border:1px solid rgba(76,201,240,.35);color:#4cc9f0;font-family:'Boogaloo',cursive;font-size:16px;padding:8px 28px;border-radius:20px;cursor:pointer;transition:.15s;">
-        🔄 Actualiser
-      </button>
+    <!-- Onglets -->
+    <div id="lb-tabs">
+      <button class="lb-tab active" onclick="switchLbTab('global')">🌍 Mondial</button>
+      <button class="lb-tab" onclick="switchLbTab('hero')">🦸 Par Héros</button>
+    </div>
+    <!-- Section mondial -->
+    <div id="lb-section-global">
+      <div id="lb-status" style="text-align:center;font-size:12px;color:#a0a0c0;margin-bottom:16px;min-height:18px;"></div>
+      <div id="leaderboard-list"></div>
+      <div style="text-align:center;margin-top:16px;">
+        <button onclick="renderLeaderboard()" id="lb-refresh-btn"
+          style="background:rgba(76,201,240,.15);border:1px solid rgba(76,201,240,.35);color:#4cc9f0;font-family:'Boogaloo',cursive;font-size:16px;padding:8px 28px;border-radius:20px;cursor:pointer;transition:.15s;">
+          🔄 Actualiser
+        </button>
+      </div>
+    </div>
+    <!-- Section par héros -->
+    <div id="lb-section-hero" style="display:none;">
+      <div id="lb-hero-status" style="text-align:center;font-size:12px;color:#a0a0c0;margin-bottom:10px;min-height:18px;"></div>
+      <div id="lb-hero-picker"></div>
+      <div id="lb-hero-list"></div>
+      <div style="text-align:center;margin-top:16px;">
+        <button onclick="renderHeroLeaderboard(currentLbHero)" id="lb-hero-refresh-btn"
+          style="background:rgba(76,201,240,.15);border:1px solid rgba(76,201,240,.35);color:#4cc9f0;font-family:'Boogaloo',cursive;font-size:16px;padding:8px 28px;border-radius:20px;cursor:pointer;transition:.15s;">
+          🔄 Actualiser
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -6693,6 +6724,8 @@ function openLeaderboard(){
   closeHamburgerMenu();
   document.getElementById('hamburger-btn').style.display='none';
   document.getElementById('panel-leaderboard').style.display='block';
+  // Reset to global tab
+  switchLbTab('global');
   renderLeaderboard();
 }
 
@@ -6792,6 +6825,157 @@ function _renderLbOffline(list, status, localTrophies, localHero, localName){
       <div style="color:#f9c74f;font-family:'Boogaloo',cursive;font-size:16px;">🏆 ${localTrophies}</div>
     </div>
   </div>`;
+}
+
+// ===================== LEADERBOARD TABS =====================
+let currentLbHero = 0;
+
+function switchLbTab(tab){
+  document.querySelectorAll('.lb-tab').forEach((b,i)=>{
+    b.classList.toggle('active', (i===0&&tab==='global')||(i===1&&tab==='hero'));
+  });
+  document.getElementById('lb-section-global').style.display = tab==='global'?'block':'none';
+  document.getElementById('lb-section-hero').style.display  = tab==='hero' ?'block':'none';
+  if(tab==='hero') initHeroLeaderboard();
+}
+
+function initHeroLeaderboard(){
+  const picker = document.getElementById('lb-hero-picker');
+  if(picker.children.length > 0) return; // already built
+  picker.innerHTML = heroes.map((h,i)=>{
+    const rc = getRarityColor(h.rarity);
+    return `<button class="lb-hero-btn${i===currentLbHero?' selected':''}" style="--hc:${rc}"
+      onclick="selectLbHero(${i})">
+      <span class="lhb-emoji">${h.emoji}</span>
+      <span class="lhb-name">${h.name}</span>
+    </button>`;
+  }).join('');
+  renderHeroLeaderboard(currentLbHero);
+}
+
+function selectLbHero(idx){
+  currentLbHero = idx;
+  document.querySelectorAll('.lb-hero-btn').forEach((b,i)=>b.classList.toggle('selected', i===idx));
+  renderHeroLeaderboard(idx);
+}
+
+async function renderHeroLeaderboard(heroIdx){
+  const h = heroes[heroIdx];
+  const rc = getRarityColor(h.rarity);
+  const list = document.getElementById('lb-hero-list');
+  const status = document.getElementById('lb-hero-status');
+  const refreshBtn = document.getElementById('lb-hero-refresh-btn');
+
+  list.innerHTML = `<div style="text-align:center;padding:32px 0;color:#a0a0c0;">
+    <div style="font-size:32px;margin-bottom:8px;">⏳</div>
+    <div style="font-family:'Boogaloo',cursive;font-size:16px;">Chargement pour ${h.emoji} ${h.name}…</div>
+  </div>`;
+  status.textContent = '';
+  if(refreshBtn) refreshBtn.disabled = true;
+
+  const acc = getSavedAccount();
+  const myEmail = acc?.email || null;
+
+  // Trophées locaux du héros sélectionné (fallback)
+  const localHeroTrophies = hData[heroIdx]?.trophies || 0;
+  const localName = document.getElementById('hero-name-preview')?.textContent || 'Joueur';
+
+  const ok = await _initFirebase();
+  if(!ok){
+    status.textContent = '⚠️ Mode hors ligne';
+    list.innerHTML = `<div style="text-align:center;padding:28px 0;color:#a0a0c0;">
+      <div style="font-size:38px;margin-bottom:8px;">${h.emoji}</div>
+      <div style="font-family:'Boogaloo',cursive;font-size:18px;color:${rc};">${h.name}</div>
+      <div style="margin-top:14px;background:rgba(255,255,255,.05);border-radius:14px;padding:12px 18px;display:inline-block;">
+        <div style="font-size:13px;color:#a0a0c0;margin-bottom:4px;">Tes trophées avec ce héros</div>
+        <div style="font-family:'Boogaloo',cursive;font-size:24px;color:#f9c74f;">🏆 ${localHeroTrophies}</div>
+      </div>
+    </div>`;
+    if(refreshBtn) refreshBtn.disabled = false;
+    return;
+  }
+
+  try{
+    const snap = await _fbDb.collection("accounts").get();
+    const players = [];
+    snap.forEach(doc=>{
+      const d = doc.data();
+      // Trophées du héros : stockés dans hDataRaw (JSON) sous hData[heroIdx].trophies
+      let heroTrophies = 0;
+      try{
+        const hd = d.gameState?.hDataRaw ? JSON.parse(d.gameState.hDataRaw) : null;
+        if(hd && hd[heroIdx]) heroTrophies = hd[heroIdx].trophies || 0;
+      }catch(e){}
+      if(heroTrophies <= 0) return; // skip players who never played this hero
+      const name = d.username || 'Joueur';
+      const avatar = d.avatar || '😀';
+      const isMe = myEmail && d.email && d.email.toLowerCase()===myEmail.toLowerCase();
+      players.push({name, avatar, t: heroTrophies, isMe, email: d.email});
+    });
+
+    // Ajouter le joueur local s'il n'a pas de compte
+    const meInList = players.some(p=>p.isMe);
+    if(!meInList && !myEmail && localHeroTrophies > 0){
+      players.push({name: localName, avatar: h.emoji, t: localHeroTrophies, isMe: true, email: null});
+    }
+
+    players.sort((a,b)=>b.t-a.t);
+    const top = players.slice(0, 100);
+
+    const myRank = top.findIndex(p=>p.isMe)+1;
+    const rankInfo = myRank > 0
+      ? `🏅 Ton rang avec ${h.emoji} : #${myRank} sur ${players.length} joueur${players.length>1?'s':''}`
+      : players.length > 0
+        ? `${players.length} joueur${players.length>1?'s':''} ont joué ${h.name}`
+        : '';
+    status.textContent = rankInfo;
+
+    if(top.length === 0){
+      list.innerHTML = `<div style="text-align:center;padding:32px 0;">
+        <div style="font-size:52px;margin-bottom:10px;">${h.emoji}</div>
+        <div style="font-family:'Boogaloo',cursive;font-size:18px;color:${rc};margin-bottom:6px;">${h.name}</div>
+        <div style="font-size:13px;color:#a0a0c0;line-height:1.7;">Personne n'a encore joué avec ce héros.<br>Sois le premier à apparaître ici !</div>
+      </div>`;
+    } else {
+      const medals=['lb-gold','lb-silver','lb-bronze'];
+      const rankEmojis=['🥇','🥈','🥉'];
+      // Header héros
+      const rank = getHeroRank(top[0]?.t || 0);
+      list.innerHTML = `
+        <div style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.04);border:1px solid ${rc}33;border-radius:16px;padding:12px 16px;margin-bottom:14px;">
+          <div style="font-size:44px;filter:drop-shadow(0 0 18px ${rc});">${h.emoji}</div>
+          <div>
+            <div style="font-family:'Boogaloo',cursive;font-size:20px;color:${rc};">${h.name}</div>
+            <div style="font-size:11px;color:#a0a0c0;margin-top:2px;">${getRarityLabel(h.rarity)} · ${top.length} joueur${top.length>1?'s':''}</div>
+          </div>
+          <div style="margin-left:auto;text-align:right;">
+            <div style="font-size:11px;color:#a0a0c0;">Meilleur</div>
+            <div style="font-family:'Boogaloo',cursive;font-size:18px;color:#f9c74f;">🏆 ${top[0]?.t||0}</div>
+          </div>
+        </div>
+        ${top.map((p,i)=>{
+          const cls = medals[i]||'';
+          const rankDisp = rankEmojis[i]||`#${i+1}`;
+          const youBadge = p.isMe ? ` <span style="background:rgba(249,199,79,.2);color:#f9c74f;border:1px solid #f9c74f55;border-radius:10px;font-size:10px;padding:1px 8px;font-family:'Nunito',sans-serif;white-space:nowrap;">TOI</span>` : '';
+          const highlight = p.isMe ? ';border-color:rgba(249,199,79,.6);background:rgba(249,199,79,.1);' : '';
+          const pr = getHeroRank(p.t);
+          return `<div class="lb-row ${cls}" style="position:relative${highlight}">
+            <div class="lb-rank">${rankDisp}</div>
+            <div class="lb-emoji">${p.avatar}</div>
+            <div class="lb-name" style="min-width:0;overflow:hidden;">
+              <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.name}${youBadge}</div>
+              <div style="font-size:10px;color:${pr.color};margin-top:1px;">${pr.icon} ${pr.name}</div>
+            </div>
+            <div class="lb-trophies">🏆 ${p.t}</div>
+          </div>`;
+        }).join('')}`;
+    }
+  }catch(e){
+    console.warn('Hero leaderboard error', e);
+    status.textContent = '⚠️ Erreur de chargement';
+    list.innerHTML = `<div style="text-align:center;padding:24px;color:#a0a0c0;font-size:14px;">Impossible de charger le classement.</div>`;
+  }
+  if(refreshBtn) refreshBtn.disabled = false;
 }
 
 // ===================== HAMBURGER MENU =====================
