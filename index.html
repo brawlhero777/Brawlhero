@@ -2288,7 +2288,6 @@ let chaosActive=false,chaosTimer=0; // for jester chaos
 let ljActive=false,ljId=-1,ljBaseX=0,ljBaseY=0,ljDX=0,ljDY=0;
 let rjActive=false,rjId=-1,rjBaseX=0,rjBaseY=0,rjDX=0,rjDY=0;
 const JOY_R=55,JOY_DEAD=0.15;
-const AIM_R=110; // rayon du joystick d'aim (diamètre ~220px)
 // World & camera
 const WORLD_W=1800,WORLD_H=1400;
 let camX=0,camY=0;
@@ -2340,8 +2339,8 @@ canvas.addEventListener("touchmove",e=>{
     }
     if(t.identifier===rjId){
       let dx=t.clientX-rjBaseX,dy=t.clientY-rjBaseY;
-      const l=Math.sqrt(dx*dx+dy*dy);if(l>AIM_R){dx=dx/l*AIM_R;dy=dy/l*AIM_R;}
-      rjDX=dx/AIM_R;rjDY=dy/AIM_R;
+      const l=Math.sqrt(dx*dx+dy*dy);if(l>JOY_R){dx=dx/l*JOY_R;dy=dy/l*JOY_R;}
+      rjDX=dx/JOY_R;rjDY=dy/JOY_R;
       if(Math.sqrt(rjDX*rjDX+rjDY*rjDY)>JOY_DEAD)tryShoot();
     }
   }
@@ -2907,7 +2906,7 @@ function update(dt){
     if(en.shootTimer<=0){
       en.shootTimer=en.shootCd[0]+Math.random()*(en.shootCd[1]-en.shootCd[0]);
       if(distToTarget<en.rangeMax+60){
-        const bvx=Math.cos(angToTarget)*10,bvy=Math.sin(angToTarget)*10;
+        const bvx=Math.cos(angToTarget)*7.5,bvy=Math.sin(angToTarget)*7.5;
         bullets.push({x:en.x,y:en.y,vx:bvx,vy:bvy,life:1,dist:0,fromPlayer:false,
           fromEnemy:en,dmg:en.dmg*0.55,color:en.color});
         en._lastShot=performance.now();
@@ -4386,20 +4385,33 @@ function draw(){
   // Player
   draw3DHero(ctx, playerX, playerY, 22, heroes[selected].emoji, heroColor, true);
 
-  // Aim line
+  // Aim line — long beam style (like Brawl Stars screenshot)
   const aimLen=Math.sqrt(rjDX*rjDX+rjDY*rjDY);
   if(aimLen>JOY_DEAD){
-    ctx.save();ctx.globalAlpha=0.3;ctx.strokeStyle=heroColor;ctx.lineWidth=2;
-    ctx.setLineDash([6,6]);
-    ctx.beginPath();ctx.moveTo(playerX,playerY);
-    ctx.lineTo(playerX+rjDX*80,playerY+rjDY*80);ctx.stroke();ctx.restore();
+    ctx.save();
+    const beamLen=1800; // traverse tout le monde
+    const ex=playerX+rjDX/aimLen*beamLen;
+    const ey=playerY+rjDY/aimLen*beamLen;
+    // Glow large derrière
+    ctx.globalAlpha=0.10;
+    ctx.strokeStyle="#a8e6ff";ctx.lineWidth=18;ctx.lineCap="round";
+    ctx.beginPath();ctx.moveTo(playerX,playerY);ctx.lineTo(ex,ey);ctx.stroke();
+    // Glow moyen
+    ctx.globalAlpha=0.18;
+    ctx.strokeStyle="#6dd5fa";ctx.lineWidth=7;
+    ctx.beginPath();ctx.moveTo(playerX,playerY);ctx.lineTo(ex,ey);ctx.stroke();
+    // Trait central fin et net
+    ctx.globalAlpha=0.75;
+    ctx.strokeStyle="#ffffff";ctx.lineWidth=2;ctx.setLineDash([]);
+    ctx.beginPath();ctx.moveTo(playerX,playerY);ctx.lineTo(ex,ey);ctx.stroke();
+    ctx.restore();
   }
 
   // Joysticks
   ctx.restore(); // end camera transform
 
   drawJoystick(ljActive?ljBaseX:W*0.18,ljActive?ljBaseY:H-110,ljDX,ljDY,ljActive,"#4cc9f0","Move");
-  drawAimJoystick(rjActive?rjBaseX:W*0.82,rjActive?rjBaseY:H-110,rjDX,rjDY,rjActive);
+  drawJoystick(rjActive?rjBaseX:W*0.82,rjActive?rjBaseY:H-110,rjDX,rjDY,rjActive,"#f3722c","Fire");
   if(typeof drawMPOverlay==="function") drawMPOverlay();
 }
 
@@ -4419,61 +4431,6 @@ function drawJoystick(bx,by,dx,dy,active,color,label){
   ctx.fillText(label,bx,by+JOY_R+16);
   ctx.restore();
 }
-
-function drawAimJoystick(bx,by,dx,dy,active){
-  const color="#f3722c";
-  const alpha=active?0.75:0.28;
-  const knobR=AIM_R*0.28; // knob ~30px
-  ctx.save();
-
-  // Outer ring
-  ctx.globalAlpha=alpha;
-  ctx.strokeStyle=color;ctx.lineWidth=3;
-  ctx.beginPath();ctx.arc(bx,by,AIM_R,0,Math.PI*2);ctx.stroke();
-
-  // Inner fill
-  ctx.fillStyle=color;ctx.globalAlpha=alpha*0.12;
-  ctx.beginPath();ctx.arc(bx,by,AIM_R,0,Math.PI*2);ctx.fill();
-
-  // Inner guide circle (at 60% radius)
-  ctx.globalAlpha=alpha*0.4;
-  ctx.strokeStyle=color;ctx.lineWidth=1.5;ctx.setLineDash([4,6]);
-  ctx.beginPath();ctx.arc(bx,by,AIM_R*0.6,0,Math.PI*2);ctx.stroke();
-  ctx.setLineDash([]);
-
-  // Arrow indicator at edge (shows direction even when idle)
-  const mag=Math.sqrt(dx*dx+dy*dy);
-  if(mag>0.05){
-    const nx=dx/mag,ny=dy/mag;
-    const arrowX=bx+nx*AIM_R,arrowY=by+ny*AIM_R;
-    ctx.globalAlpha=active?0.9:0.5;
-    ctx.fillStyle=color;
-    ctx.shadowBlur=16;ctx.shadowColor=color;
-    // Triangle arrow at edge
-    ctx.save();
-    ctx.translate(arrowX,arrowY);
-    ctx.rotate(Math.atan2(ny,nx));
-    ctx.beginPath();ctx.moveTo(8,0);ctx.lineTo(-6,-5);ctx.lineTo(-6,5);ctx.closePath();ctx.fill();
-    ctx.restore();
-  }
-
-  // Knob
-  const kx=bx+dx*AIM_R,ky=by+dy*AIM_R;
-  ctx.globalAlpha=active?0.92:0.38;
-  ctx.shadowBlur=24;ctx.shadowColor=color;
-  ctx.fillStyle=color;
-  ctx.beginPath();ctx.arc(kx,ky,knobR,0,Math.PI*2);ctx.fill();
-  // Knob inner highlight
-  ctx.globalAlpha=active?0.45:0.18;
-  ctx.fillStyle="#fff";
-  ctx.beginPath();ctx.arc(kx-knobR*0.25,ky-knobR*0.25,knobR*0.38,0,Math.PI*2);ctx.fill();
-
-  // Label
-  ctx.globalAlpha=active?0.7:0.3;
-  ctx.fillStyle="#fff";ctx.font="bold 12px Nunito";ctx.textAlign="center";ctx.textBaseline="middle";
-  ctx.fillText("Fire",bx,by+AIM_R+16);
-
-  ctx.restore();
 
 // ===================== HERO TROPHY RANKS =====================
 // Like Brawl Stars: each rank has a threshold and a color/name
