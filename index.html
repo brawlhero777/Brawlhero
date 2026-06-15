@@ -844,13 +844,9 @@ canvas{display:block;touch-action:none;}
     </div>
     <div class="detail-section" style="margin-bottom:14px;">
       <h4 style="font-size:13px;color:#a0a0c0;text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;">🔊 Audio</h4>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
         <span style="font-size:14px;">Musique</span>
         <label class="toggle-switch"><input type="checkbox" id="set-music" checked onchange="applySettings()"><span class="toggle-slider"></span></label>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-size:14px;">Effets sonores</span>
-        <label class="toggle-switch"><input type="checkbox" id="set-sfx" checked onchange="applySettings()"><span class="toggle-slider"></span></label>
       </div>
     </div>
     <div class="detail-section" style="margin-bottom:14px;">
@@ -5848,7 +5844,6 @@ let lastVoiceTime = 0;
 
 function speak(text, color){
   if(!voiceEnabled) return;
-  if(getSettings().sfx===false) return;
   const now = Date.now();
   if(now - lastVoiceTime < 1200) return; // avoid overlap spam
   lastVoiceTime = now;
@@ -6531,14 +6526,12 @@ function openSettings(){
 function loadSettings(){
   const s=JSON.parse(localStorage.getItem('gameSettings')||'{}');
   document.getElementById('set-music').checked     = s.music     !== false;
-  document.getElementById('set-sfx').checked       = s.sfx       !== false;
   document.getElementById('set-vibration').checked = s.vibration !== false;
   _applySettingsToGame(s);
 }
 function applySettings(){
   const s={
     music:     document.getElementById('set-music').checked,
-    sfx:       document.getElementById('set-sfx').checked,
     vibration: document.getElementById('set-vibration').checked,
   };
   localStorage.setItem('gameSettings', JSON.stringify(s));
