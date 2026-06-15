@@ -5521,10 +5521,10 @@ function _initFirebase(){
   return new Promise((resolve)=>{
     if(_fbReady){ resolve(true); return; }
     if(_fbInitError){ resolve(false); return; }
-    // Load Firebase SDKs dynamically
-    const s1=document.createElement("script");
-    s1.src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js";
-    s1.onload=()=>{
+    // firebase-app-compat.js is already loaded statically at the top of the page —
+    // do NOT inject it again (causes "Firebase is already defined" and breaks the
+    // existing firebase.database() instance used for online multiplayer).
+    function loadFirestoreAndInit(){
       const s2=document.createElement("script");
       s2.src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js";
       s2.onload=()=>{
@@ -5538,9 +5538,17 @@ function _initFirebase(){
       };
       s2.onerror=()=>{ _fbInitError=true; resolve(false); };
       document.head.appendChild(s2);
-    };
-    s1.onerror=()=>{ _fbInitError=true; resolve(false); };
-    document.head.appendChild(s1);
+    }
+    if(typeof firebase!=="undefined" && firebase.app){
+      loadFirestoreAndInit();
+    }else{
+      // Fallback: firebase-app-compat.js wasn't loaded yet for some reason
+      const s1=document.createElement("script");
+      s1.src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js";
+      s1.onload=loadFirestoreAndInit;
+      s1.onerror=()=>{ _fbInitError=true; resolve(false); };
+      document.head.appendChild(s1);
+    }
   });
 }
 
