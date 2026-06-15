@@ -2586,6 +2586,7 @@ function update(dt){
   camX=Math.max(0,Math.min(WORLD_W-W,playerX-W/2));
   camY=Math.max(0,Math.min(WORLD_H-H,playerY-H/2));
   if(keys[" "])tryShoot();
+  if(rjActive&&Math.sqrt(rjDX*rjDX+rjDY*rjDY)>JOY_DEAD)tryShoot();
 
   // ---- SUPER CHARGE (basé sur les hits, pas le temps) ----
   if(superCooldown>0){
