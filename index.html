@@ -6669,15 +6669,16 @@ function mpOnKill(en) {
     // Le joueur a fait le dernier tir — c'est lui le tueur
     killerName = "Toi";
     killerEmoji = heroes[selected]?.emoji || "😀";
-  } else if(en._lastHitBy && en._lastHitBy !== "player"){
+  } else if(en._lastHitBy === "zone"){
+    killerName = "Zone ☠";
+    killerEmoji = "☣️";
+  } else if(en._lastHitBy && typeof en._lastHitBy === "object" && !en._lastHitBy.dead){
     // Un ennemi a fait le dernier tir
     const killer = en._lastHitBy;
-    if(!killer.dead){
-      killerName = killer._fakeName || killer.emoji;
-      killerEmoji = killer.emoji;
-    }
+    killerName = killer._fakeName || killer.emoji;
+    killerEmoji = killer.emoji;
   } else {
-    // Pas d'info (zone poison, contact…) → "Zone"
+    // Pas d'info (contact, cause inconnue…)
     killerName = "Zone ☠";
     killerEmoji = "☣️";
   }
