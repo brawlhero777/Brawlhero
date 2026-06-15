@@ -860,10 +860,6 @@ canvas{display:block;touch-action:none;}
         <label class="toggle-switch"><input type="checkbox" id="set-vibration" checked onchange="applySettings()"><span class="toggle-slider"></span></label>
       </div>
       <button id="vibration-test-btn" onclick="testVibration()">📳 Tester la vibration</button>
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-size:14px;">Afficher les contrôles</span>
-        <label class="toggle-switch"><input type="checkbox" id="set-controls" checked onchange="applySettings()"><span class="toggle-slider"></span></label>
-      </div>
     </div>
     <div class="detail-section">
       <h4 style="font-size:13px;color:#a0a0c0;text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;">📊 Données</h4>
@@ -4803,14 +4799,15 @@ updateUI();
 // ===================== VIBRATION SYSTEM =====================
 function vibratePattern(pattern){
   try{
-    const el=document.getElementById("set-vibration");
-    if(el&&!el.checked) return;
+    const s=getSettings();
+    if(s.vibration===false) return;
     if(navigator.vibrate) navigator.vibrate(pattern);
   }catch(e){}
 }
 function vibrate(ms){vibratePattern([ms]);}
 function testVibration(){
-  vibratePattern([50,80,50,80,150]);
+  // Test sans vérifier le setting (bouton de test)
+  try{ if(navigator.vibrate) navigator.vibrate([50,80,50,80,150]); }catch(e){}
 }
 
 // ===================== POST-GAME STATS =====================
@@ -5055,8 +5052,8 @@ function skipTutorial(){
   document.getElementById("tutorial-overlay").classList.remove("active");
 }
 
-// Hook tutorial into startGame
-const _origStartGame=typeof startGame==="function"?startGame:null;
+// Hook tutorial into startGame — déclenché depuis startGame() directement
+
 const AudioCtx=window.AudioContext||window.webkitAudioContext;
 let audioCtx=null;
 let musicNodes=[];  // tous les nœuds actifs pour pouvoir les stopper
@@ -5122,6 +5119,7 @@ function makeNoiseLoop(filterFreq,filterQ,vol,out){
 
 // ---- MENU MUSIC : chiptune rétro arcade ----
 function playMenuMusic(){
+  if(getSettings().music===false) return;
   ensureAudio();stopMusic(300);
   const master=makeGain(0);
   master.gain.setTargetAtTime(0.50,audioCtx.currentTime,0.8);
@@ -5185,6 +5183,7 @@ function playMenuMusic(){
 
 // ---- MAP MUSICS ----
 function playMapMusic(mapId){
+  if(getSettings().music===false) return;
   ensureAudio();stopMusic(400);
   const master=makeGain(0);
   master.gain.setTargetAtTime(0.5,audioCtx.currentTime,1.0);
@@ -5514,6 +5513,7 @@ function playNightMusic(now,master){
 
 // 🛒 BOUTIQUE — jazz bossa nova détendu, balancé et cool
 function playShopMusic(){
+  if(getSettings().music===false) return;
   ensureAudio();stopMusic(400);
   const master=makeGain(0);
   master.gain.setTargetAtTime(0.46,audioCtx.currentTime,0.8);
@@ -5588,6 +5588,7 @@ function playShopMusic(){
 
 // 🎒 COLLECTION — orchestral cinématique, thème épique et dramatique
 function playCollectionMusic(){
+  if(getSettings().music===false) return;
   ensureAudio();stopMusic(400);
   const master=makeGain(0);
   master.gain.setTargetAtTime(0.48,audioCtx.currentTime,0.9);
@@ -5847,6 +5848,7 @@ let lastVoiceTime = 0;
 
 function speak(text, color){
   if(!voiceEnabled) return;
+  if(getSettings().sfx===false) return;
   const now = Date.now();
   if(now - lastVoiceTime < 1200) return; // avoid overlap spam
   lastVoiceTime = now;
@@ -6528,20 +6530,48 @@ function openSettings(){
 }
 function loadSettings(){
   const s=JSON.parse(localStorage.getItem('gameSettings')||'{}');
-  document.getElementById('set-music').checked   = s.music   !== false;
-  document.getElementById('set-sfx').checked     = s.sfx     !== false;
+  document.getElementById('set-music').checked     = s.music     !== false;
+  document.getElementById('set-sfx').checked       = s.sfx       !== false;
   document.getElementById('set-vibration').checked = s.vibration !== false;
-  document.getElementById('set-controls').checked  = s.controls  !== false;
+  _applySettingsToGame(s);
 }
 function applySettings(){
   const s={
-    music:    document.getElementById('set-music').checked,
-    sfx:      document.getElementById('set-sfx').checked,
-    vibration:document.getElementById('set-vibration').checked,
-    controls: document.getElementById('set-controls').checked,
+    music:     document.getElementById('set-music').checked,
+    sfx:       document.getElementById('set-sfx').checked,
+    vibration: document.getElementById('set-vibration').checked,
   };
   localStorage.setItem('gameSettings', JSON.stringify(s));
+  _applySettingsToGame(s);
 }
+function getSettings(){
+  return JSON.parse(localStorage.getItem('gameSettings')||'{}');
+}
+function _applySettingsToGame(s){
+  // --- Musique ---
+  const musicOn = s.music !== false;
+  if(!musicOn){
+    // Coupe la musique immédiatement
+    stopMusic(200);
+  } else {
+    // Relance la musique si elle était coupée et qu'on est en jeu / menu
+    if(audioCtx && musicNodes.length===0 && _audioUnlocked){
+      const inGame=document.getElementById('gameWrap')?.style.display==='block';
+      const inMenu=document.getElementById('menu')?.style.display==='flex';
+      if(inGame && typeof playMapMusic==='function') playMapMusic(typeof selectedMap!=='undefined'?selectedMap.id:'grass');
+      else if(inMenu && typeof playMenuMusic==='function') playMenuMusic();
+    }
+  }
+  // --- Gain musique (volume à 0 si off) ---
+  if(musicGain){
+    try{
+      const target = musicOn ? 0.5 : 0;
+      musicGain.gain.setTargetAtTime(target, audioCtx.currentTime, 0.3);
+    }catch(e){}
+  }
+}
+// Settings sont chargés au démarrage via loadSettings() appelé depuis openSettings()
+
 function openResetModal(){
   document.getElementById('reset-input').value='';
   document.getElementById('reset-confirm-btn').disabled=true;
@@ -7817,6 +7847,11 @@ window.addEventListener("load", ()=>{
   const menu = document.getElementById("menu");
   if(menu) _menuObserver.observe(menu, {attributes:true, attributeFilter:["style"]});
   updateProfileBtn();
+  // Appliquer les paramètres sauvegardés dès le démarrage
+  try{
+    const s=JSON.parse(localStorage.getItem('gameSettings')||'{}');
+    _applySettingsToGame(s);
+  }catch(e){}
 });
 
 </script>
