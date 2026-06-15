@@ -1594,7 +1594,6 @@ function getSuperDesc(id){
     tornado:  "Crée une <strong>tornade géante pendant 2 secondes</strong> qui aspire les ennemis proches en spirale et leur inflige des dégâts continus avant de les projeter.",
     plague:   "Libère un <strong>nuage de poison qui s'étend progressivement</strong> depuis ta position, empoisonnant tout ennemi qu'il atteint.",
     swoop:    "Tu <strong>traverses la carte à grande vitesse</strong> dans la direction visée, blessant tout ennemi sur ta trajectoire. Plus tu traverses d'ennemis, plus les dégâts s'accumulent.",
-    chaos:    "<strong>Tous les ennemis deviennent fous pendant 5 secondes</strong> et s'attaquent entre eux. Utilise ce temps pour fuir, récupérer ou préparer le prochain super.",
     blooddrain:"Te <strong>téléporte sur 5 ennemis un par un</strong> et leur vole leurs HP pour te soigner. Chaque ennemi tué en chaîne augmente le soin reçu.",
     quake:    "Frappe le sol pour créer une <strong>onde de choc qui repousse et étourdit tous les ennemis</strong>. Plus ils sont proches, plus ils volent loin et restent bloqués longtemps.",
     rainbow:  "Lance <strong>3 salves de 14 projectiles colorés</strong> dans toutes les directions, et ralentit tous les ennemis touchés pendant 3 secondes.",
@@ -2434,8 +2433,6 @@ function initGame(){
   sbtn.className="";
   document.getElementById("super-cd-bar").style.width="0%";
   document.getElementById("super-cd-label").textContent=superMaxCd+" hits";
-  document.getElementById("super-cd-bar").style.width="100%";
-  document.getElementById("super-cd-label").textContent="PRÊT !";
   ljActive=false;ljId=-1;ljDX=0;ljDY=0;
   rjActive=false;rjId=-1;rjDX=0;rjDY=0;
 
@@ -2639,6 +2636,7 @@ function update(dt){
         const enPoisonDmg=(en.maxHp/7)*(dt/1000);
         en.hp-=enPoisonDmg;
         en._lastHurt=performance.now();
+        en._lastHitBy="zone";
         spawnParticles(en.x,en.y,"#39ff14",1);
         if(en.hp<=0){killEnemy(en);if(gameRunning&&kills>=totalEnemies){winGame();return;}}
       }
@@ -2664,6 +2662,7 @@ function update(dt){
       const enHeavyDmg=(en.maxHp/3)*(dt/1000);
       en.hp-=enHeavyDmg;
       en._lastHurt=performance.now();
+      en._lastHitBy="zone";
       spawnParticles(en.x,en.y,"#39ff14",2);
       if(en.hp<=0){killEnemy(en);if(gameRunning&&kills>=totalEnemies){winGame();return;}}
     });
@@ -2952,6 +2951,7 @@ function update(dt){
         const dmg=(playerDmg+gemBonus.dmg);
         en.hp-=dmg;
         en._lastHurt=performance.now();
+        en._lastHitBy="player";
         b.life=0;
         spawnParticles(en.x,en.y,en.color,4);
         // MP: if this is a real remote player, tell them they got hit (they own their HP)
@@ -2997,6 +2997,7 @@ function update(dt){
         const dmg2=(b.dmg||5)*1.8;
         en.hp-=dmg2;
         en._lastHurt=performance.now();
+        en._lastHitBy=b.fromEnemy||null;
         b.life=0;
         spawnParticles(en.x,en.y,en.color,5);
         if(en._isRemote&&typeof mpSendHit==="function") mpSendHit(en._pid,dmg2);
@@ -4530,6 +4531,7 @@ function showEndScreen(rank){
 
   const go=document.getElementById("gameOver");
   go.style.display="flex";
+  document.getElementById("hamburger-btn").style.display="flex";
   document.getElementById("go-rank-badge").textContent=badge+" TOP "+rank;
   const titleEl=document.getElementById("go-title");
   titleEl.textContent=title;
@@ -6661,13 +6663,23 @@ function drawMPOverlay() {
 function mpOnKill(en) {
   const victimName = en._fakeName || en.emoji;
   const victimEmoji = en.emoji;
-  const aliveOthers = enemies.filter(e => !e.dead && e !== en);
   let killerName = "Toi", killerEmoji = heroes[selected]?.emoji || "😀";
-  const isPlayerKill = (performance.now() - playerLastShot) < 500;
-  if(!isPlayerKill && aliveOthers.length > 0) {
-    const killer = aliveOthers[Math.floor(Math.random()*aliveOthers.length)];
-    killerName = killer._fakeName || killer.emoji;
-    killerEmoji = killer.emoji;
+
+  if(en._lastHitBy === "player"){
+    // Le joueur a fait le dernier tir — c'est lui le tueur
+    killerName = "Toi";
+    killerEmoji = heroes[selected]?.emoji || "😀";
+  } else if(en._lastHitBy && en._lastHitBy !== "player"){
+    // Un ennemi a fait le dernier tir
+    const killer = en._lastHitBy;
+    if(!killer.dead){
+      killerName = killer._fakeName || killer.emoji;
+      killerEmoji = killer.emoji;
+    }
+  } else {
+    // Pas d'info (zone poison, contact…) → "Zone"
+    killerName = "Zone ☠";
+    killerEmoji = "☣️";
   }
   addKillfeedEntry(killerName, victimName, killerEmoji, victimEmoji);
 }
