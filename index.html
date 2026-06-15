@@ -6234,7 +6234,7 @@ function mpJoinOrCreateRoom(myInfo, status, countEl, pingEl){
     if(!chosenRoomId){
       chosenRoomId = "room_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2,7);
       mpRoomRef = lobbyRef.child(chosenRoomId);
-      mpRoomRef.set({status:"waiting", createdAt: firebase.database.ServerValue.TIMESTAMP});
+      mpRoomRef.set({status:"waiting", createdAt: Date.now()});
     }
     mpRoomId = chosenRoomId;
     mpRoomRef = lobbyRef.child(mpRoomId);
@@ -6244,7 +6244,7 @@ function mpJoinOrCreateRoom(myInfo, status, countEl, pingEl){
     myRef.set({
       name: myInfo.name, tag: myInfo.tag, emoji: myInfo.emoji,
       trophies: myInfo.trophies, heroIndex: myInfo.heroIndex,
-      joinedAt: firebase.database.ServerValue.TIMESTAMP,
+      joinedAt: Date.now(),
       state: {x: 0, y: 0, hp: 100, maxHp: 100, dead: false}
     });
     myRef.onDisconnect().remove();
@@ -6458,7 +6458,7 @@ function mpSendHit(pid, dmg){
   mpPlayersRef.child(pid).child("incomingHits").push({
     dmg: Math.round(dmg*10)/10,
     from: mpGetPid(),
-    t: firebase.database.ServerValue.TIMESTAMP
+    t: Date.now()
   });
 }
 
