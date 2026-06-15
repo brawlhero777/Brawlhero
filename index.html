@@ -596,12 +596,237 @@ canvas{display:block;touch-action:none;}
 }
 .hmenu-item:hover{background:rgba(255,255,255,.1);}
 .hmenu-sep{height:1px;background:rgba(255,255,255,.08);margin:4px 0;}
+
+/* ===== TUTORIEL INTERACTIF ===== */
+#tutorial-overlay{
+  display:none;position:fixed;inset:0;z-index:99000;
+  background:rgba(0,0,0,.0);pointer-events:none;
+  transition:background .3s;
+}
+#tutorial-overlay.active{pointer-events:all;}
+#tutorial-spotlight{
+  position:absolute;
+  border-radius:50%;
+  box-shadow:0 0 0 9999px rgba(0,0,0,.78);
+  transition:all .5s cubic-bezier(.4,0,.2,1);
+  pointer-events:none;
+  border:3px solid rgba(249,199,79,.6);
+}
+#tutorial-card{
+  position:absolute;
+  background:linear-gradient(145deg,#1a1a3a,#252550);
+  border:2px solid rgba(249,199,79,.5);
+  border-radius:20px;
+  padding:18px 20px;
+  max-width:280px;
+  min-width:220px;
+  color:#fff;
+  box-shadow:0 8px 40px rgba(0,0,0,.6),0 0 30px rgba(249,199,79,.15);
+  transition:all .4s cubic-bezier(.4,0,.2,1);
+  z-index:99001;
+}
+#tutorial-card::before{
+  content:'';position:absolute;width:16px;height:16px;
+  background:linear-gradient(145deg,#1a1a3a,#252550);
+  border:2px solid rgba(249,199,79,.5);
+  transform:rotate(45deg);
+}
+#tutorial-card.arrow-bottom::before{bottom:-9px;left:50%;margin-left:-8px;border-top:none;border-left:none;}
+#tutorial-card.arrow-top::before{top:-9px;left:50%;margin-left:-8px;border-bottom:none;border-right:none;}
+#tutorial-card.arrow-left::before{left:-9px;top:50%;margin-top:-8px;border-top:none;border-right:none;}
+#tutorial-card.arrow-right::before{right:-9px;top:50%;margin-top:-8px;border-bottom:none;border-left:none;}
+#tutorial-step-icon{font-size:32px;margin-bottom:6px;display:block;text-align:center;}
+#tutorial-step-title{font-family:'Boogaloo',cursive;font-size:19px;color:#f9c74f;margin-bottom:6px;text-align:center;}
+#tutorial-step-text{font-size:13px;color:#c8c8e0;line-height:1.55;text-align:center;margin-bottom:14px;}
+#tutorial-progress{display:flex;gap:5px;justify-content:center;margin-bottom:12px;}
+.tut-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.2);transition:.3s;}
+.tut-dot.active{background:#f9c74f;transform:scale(1.3);}
+.tut-dot.done{background:rgba(249,199,79,.45);}
+#tutorial-btns{display:flex;gap:8px;}
+#tutorial-skip{flex:0 0 auto;padding:9px 14px;border:none;border-radius:12px;
+  background:rgba(255,255,255,.08);color:#888;font-family:'Boogaloo',cursive;font-size:14px;cursor:pointer;}
+#tutorial-next{flex:1;padding:10px;border:none;border-radius:12px;
+  background:linear-gradient(135deg,#f9c74f,#f3722c);color:#1a1a2e;
+  font-family:'Boogaloo',cursive;font-size:16px;cursor:pointer;
+  box-shadow:0 4px 16px rgba(249,199,79,.3);}
+#tutorial-next:hover{transform:scale(1.04);}
+#tutorial-finger{
+  position:absolute;font-size:36px;pointer-events:none;
+  animation:fingerBounce 1s ease-in-out infinite;z-index:99002;
+  filter:drop-shadow(0 4px 10px rgba(0,0,0,.5));
+  display:none;
+}
+@keyframes fingerBounce{0%,100%{transform:scale(1) translateY(0)}50%{transform:scale(1.15) translateY(-6px)}}
+
+/* ===== STATS POST-PARTIE AMÉLIORÉES ===== */
+#postgame-stats{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);
+  backdrop-filter:blur(12px);z-index:9500;
+  flex-direction:column;align-items:center;justify-content:flex-start;
+  overflow-y:auto;padding:20px 16px 40px;color:#fff;
+}
+#pgs-inner{width:100%;max-width:480px;}
+#pgs-header{text-align:center;margin-bottom:18px;}
+#pgs-badge{font-size:64px;margin-bottom:4px;}
+#pgs-title{font-family:'Boogaloo',cursive;font-size:40px;margin-bottom:2px;}
+#pgs-trophy-delta{font-family:'Boogaloo',cursive;font-size:26px;margin-bottom:14px;}
+/* Stat cards grid */
+#pgs-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.pgs-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+  border-radius:16px;padding:14px 12px;text-align:center;}
+.pgs-card-icon{font-size:26px;margin-bottom:4px;}
+.pgs-card-val{font-family:'Boogaloo',cursive;font-size:26px;color:#f9c74f;line-height:1;}
+.pgs-card-lbl{font-size:11px;color:#a0a0c0;margin-top:3px;}
+/* Performance bar */
+#pgs-perf-section{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);
+  border-radius:16px;padding:16px;margin-bottom:14px;}
+#pgs-perf-title{font-family:'Boogaloo',cursive;font-size:15px;color:#a0c4ff;margin-bottom:12px;}
+.pgs-perf-row{display:flex;align-items:center;gap:10px;margin-bottom:9px;}
+.pgs-perf-label{font-size:12px;color:#c8c8e0;min-width:90px;}
+.pgs-perf-bar-bg{flex:1;height:8px;background:rgba(255,255,255,.1);border-radius:4px;overflow:hidden;}
+.pgs-perf-bar-fill{height:100%;border-radius:4px;transition:width 1s cubic-bezier(.4,0,.2,1);}
+.pgs-perf-num{font-family:'Boogaloo',cursive;font-size:13px;min-width:32px;text-align:right;color:#f9c74f;}
+/* XP / progression bar */
+#pgs-xp-section{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);
+  border-radius:16px;padding:16px;margin-bottom:14px;}
+#pgs-xp-title{font-family:'Boogaloo',cursive;font-size:15px;color:#a0c4ff;margin-bottom:10px;}
+#pgs-xp-bar-bg{height:12px;background:rgba(255,255,255,.1);border-radius:6px;overflow:hidden;margin-bottom:6px;}
+#pgs-xp-bar-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,#9b5de5,#f9c74f);
+  transition:width 1.2s cubic-bezier(.4,0,.2,1);}
+#pgs-xp-row{display:flex;justify-content:space-between;font-size:11px;color:#a0a0c0;}
+/* Stars rating */
+#pgs-stars{display:flex;justify-content:center;gap:6px;margin:12px 0;}
+.pgs-star{font-size:30px;opacity:.25;transition:opacity .3s,transform .3s;}
+.pgs-star.lit{opacity:1;transform:scale(1.15);}
+/* Highlights */
+#pgs-highlights{background:rgba(249,199,79,.07);border:1px solid rgba(249,199,79,.2);
+  border-radius:16px;padding:14px 16px;margin-bottom:16px;}
+#pgs-highlights-title{font-family:'Boogaloo',cursive;font-size:14px;color:#f9c74f;margin-bottom:8px;}
+.pgs-highlight{font-size:13px;color:#e0e0f0;margin-bottom:4px;display:flex;align-items:center;gap:6px;}
+/* Buttons */
+#pgs-btns{display:flex;gap:10px;}
+#pgs-btn-menu{flex:1;padding:14px;border:none;border-radius:14px;
+  background:rgba(255,255,255,.1);color:#fff;font-family:'Boogaloo',cursive;font-size:18px;cursor:pointer;
+  border:1px solid rgba(255,255,255,.15);}
+#pgs-btn-replay{flex:2;padding:14px;border:none;border-radius:14px;
+  background:linear-gradient(135deg,#f9c74f,#f3722c);color:#1a1a2e;
+  font-family:'Boogaloo',cursive;font-size:20px;cursor:pointer;
+  box-shadow:0 5px 20px rgba(249,199,79,.3);}
+
+/* ===== INDICATOR VIBRATION (dans les settings) ===== */
+#vibration-test-btn{
+  padding:9px 18px;border:none;border-radius:12px;
+  background:rgba(76,201,240,.15);border:1px solid rgba(76,201,240,.3);
+  color:#4cc9f0;font-family:'Boogaloo',cursive;font-size:15px;cursor:pointer;
+  transition:.15s;margin-top:10px;
+}
+#vibration-test-btn:active{transform:scale(.96);}
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 </head>
 <body>
-<!-- BOUTON HAMBURGER — intégré dans la topbar via JS -->
+<!-- ===== TUTORIEL INTERACTIF ===== -->
+<div id="tutorial-overlay">
+  <div id="tutorial-spotlight" style="width:120px;height:120px;left:50%;top:50%;margin-left:-60px;margin-top:-60px;"></div>
+  <div id="tutorial-finger">👆</div>
+  <div id="tutorial-card">
+    <span id="tutorial-step-icon">🎮</span>
+    <div id="tutorial-step-title">Bienvenue !</div>
+    <div id="tutorial-step-text">Laisse-moi te montrer comment jouer.</div>
+    <div id="tutorial-progress"></div>
+    <div id="tutorial-btns">
+      <button id="tutorial-skip" onclick="skipTutorial()">Passer</button>
+      <button id="tutorial-next" onclick="tutorialNext()">Suivant ▶</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== STATISTIQUES POST-PARTIE ===== -->
+<div id="postgame-stats">
+  <div id="pgs-inner">
+    <div id="pgs-header">
+      <div id="pgs-badge">🏅</div>
+      <div id="pgs-title">Partie terminée</div>
+      <div id="pgs-trophy-delta">±0 🏆</div>
+      <div id="pgs-stars">
+        <span class="pgs-star">⭐</span>
+        <span class="pgs-star">⭐</span>
+        <span class="pgs-star">⭐</span>
+      </div>
+    </div>
+
+    <!-- Grid de stats -->
+    <div id="pgs-grid">
+      <div class="pgs-card">
+        <div class="pgs-card-icon">⏱</div>
+        <div class="pgs-card-val" id="pgs-time">0s</div>
+        <div class="pgs-card-lbl">Temps de survie</div>
+      </div>
+      <div class="pgs-card">
+        <div class="pgs-card-icon">👾</div>
+        <div class="pgs-card-val" id="pgs-kills">0</div>
+        <div class="pgs-card-lbl">Ennemis éliminés</div>
+      </div>
+      <div class="pgs-card">
+        <div class="pgs-card-icon">💎</div>
+        <div class="pgs-card-val" id="pgs-gems">0</div>
+        <div class="pgs-card-lbl">Gemmes collectées</div>
+      </div>
+      <div class="pgs-card">
+        <div class="pgs-card-icon">🪙</div>
+        <div class="pgs-card-val" id="pgs-coins">0</div>
+        <div class="pgs-card-lbl">Pièces gagnées</div>
+      </div>
+    </div>
+
+    <!-- Barres de performance -->
+    <div id="pgs-perf-section">
+      <div id="pgs-perf-title">📊 Performance</div>
+      <div class="pgs-perf-row">
+        <span class="pgs-perf-label">Éliminations</span>
+        <div class="pgs-perf-bar-bg"><div class="pgs-perf-bar-fill" id="pgs-bar-kills" style="width:0%;background:linear-gradient(90deg,#f3722c,#f9c74f);"></div></div>
+        <span class="pgs-perf-num" id="pgs-kills-pct">0%</span>
+      </div>
+      <div class="pgs-perf-row">
+        <span class="pgs-perf-label">Survie</span>
+        <div class="pgs-perf-bar-bg"><div class="pgs-perf-bar-fill" id="pgs-bar-time" style="width:0%;background:linear-gradient(90deg,#43aa8b,#90be6d);"></div></div>
+        <span class="pgs-perf-num" id="pgs-time-pct">0%</span>
+      </div>
+      <div class="pgs-perf-row">
+        <span class="pgs-perf-label">Collecte</span>
+        <div class="pgs-perf-bar-bg"><div class="pgs-perf-bar-fill" id="pgs-bar-gems" style="width:0%;background:linear-gradient(90deg,#4fffb0,#4cc9f0);"></div></div>
+        <span class="pgs-perf-num" id="pgs-gems-pct">0%</span>
+      </div>
+    </div>
+
+    <!-- XP / progression du héros -->
+    <div id="pgs-xp-section">
+      <div id="pgs-xp-title">🦸 Progression du héros</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <span style="font-family:'Boogaloo',cursive;font-size:15px;" id="pgs-hero-name">Héros</span>
+        <span style="font-size:12px;color:#a0a0c0;" id="pgs-hero-rank">Bronze I</span>
+      </div>
+      <div id="pgs-xp-bar-bg"><div id="pgs-xp-bar-fill" style="width:0%"></div></div>
+      <div id="pgs-xp-row">
+        <span id="pgs-xp-cur">0 🏆</span>
+        <span id="pgs-xp-next">Prochain rang: 10 🏆</span>
+      </div>
+    </div>
+
+    <!-- Highlights / médailles -->
+    <div id="pgs-highlights">
+      <div id="pgs-highlights-title">🏅 Points forts</div>
+      <div id="pgs-highlights-list"></div>
+    </div>
+
+    <!-- Boutons -->
+    <div id="pgs-btns">
+      <button id="pgs-btn-menu" onclick="pgsGoMenu()">🏠</button>
+      <button id="pgs-btn-replay" onclick="pgsReplay()">🔄 Rejouer !</button>
+    </div>
+  </div>
+</div>
 <div id="hamburger-menu">
   <div class="hmenu-item" onclick="closeHamburgerMenu();openSettings()">⚙️ Paramètres</div>
   <div class="hmenu-item" onclick="closeHamburgerMenu();openHistory()">📜 Historique</div>
@@ -634,6 +859,7 @@ canvas{display:block;touch-action:none;}
         <span style="font-size:14px;">Vibration</span>
         <label class="toggle-switch"><input type="checkbox" id="set-vibration" checked onchange="applySettings()"><span class="toggle-slider"></span></label>
       </div>
+      <button id="vibration-test-btn" onclick="testVibration()">📳 Tester la vibration</button>
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <span style="font-size:14px;">Afficher les contrôles</span>
         <label class="toggle-switch"><input type="checkbox" id="set-controls" checked onchange="applySettings()"><span class="toggle-slider"></span></label>
@@ -1972,6 +2198,7 @@ function showHamburgerIfMenu(){
 
 function goMenu(){
   document.getElementById("gameOver").style.display="none";
+  document.getElementById("postgame-stats").style.display="none";
   document.getElementById("victoire").style.display="none";
   document.getElementById("menu").style.display="flex";
   document.getElementById("hamburger-btn").style.display="flex";
@@ -2411,12 +2638,17 @@ function tryShoot(){
 function startGame(){
   document.getElementById("menu").style.display="none";
   document.getElementById("gameOver").style.display="none";
+  document.getElementById("postgame-stats").style.display="none";
   document.getElementById("victoire").style.display="none";
   document.getElementById("gameWrap").style.display="block";
   document.getElementById("hamburger-btn").style.display="none";
   _audioUnlocked=true;
   playMapMusic(selectedMap.id);
   resize();initGame();
+  // Vibration légère au démarrage
+  vibrate(40);
+  // Tutoriel à la première partie
+  setTimeout(()=>{ startTutorial(); }, 800);
 }
 
 const ENEMY_TYPES=[
@@ -3051,6 +3283,7 @@ function update(dt){
       playerHP-=(b.dmg||5); b.life=0;
       playerLastHurt=performance.now();
       spawnParticles(playerX,playerY,"#ff4444",5);
+      vibrate(45); // vibration coup reçu
       if(playerHP<=0){playerHP=0;updateHealthBar();heroVoice("die");endGame();return;}
       updateHealthBar();
     }
@@ -3105,6 +3338,8 @@ function update(dt){
 function killEnemy(en){
   en.dead=true;kills++;
   spawnParticles(en.x,en.y,en.color,10);
+  // Vibration sur kill
+  vibrate(30);
   // Flaque d'élimination
   splatters.push({
     x:en.x, y:en.y,
@@ -3143,6 +3378,7 @@ function collectGem(g){
   document.getElementById("gem-count").textContent=sessionGems;
   spawnParticles(playerX,playerY,"#4fffb0",12);
   showBuff(`+${heal}❤️  +3⚔️`);
+  vibrate(20); // vibration légère gemme
 }
 
 let buffTimeout;
@@ -3183,6 +3419,7 @@ function activateSuper(){
   showBuff(heroes[selected].super.emoji+" "+heroes[selected].super.name+" !");
   startSuperCooldown();
   heroVoice("super");
+  vibratePattern([60,30,120]); // vibration super pouvoir
 
   switch(sid){
     case "dash": { // Aventurier — dash dans la direction visée, invincible 0.3s
@@ -4540,42 +4777,13 @@ function showEndScreen(rank){
   saveState();updateUI();
   document.getElementById("gameWrap").style.display="none";
 
-  // Badge & title
-  const rankBadges={1:"🥇",2:"🥈",3:"🥉"};
-  const badge=rankBadges[rank]||(rank<=5?"🏅":"💀");
-  const titles={
-    1:"VICTOIRE !",2:"2ème place",3:"3ème place",
-    4:"4ème place",5:"5ème place",6:"6ème place",
-    7:"7ème place",8:"8ème place",9:"9ème place",
-    10:"10ème place",11:"11ème place",
-  };
-  const title=titles[rank]||("Top "+rank);
+  // Vibration feedback
+  if(rank===1) vibratePattern([80,40,80,40,200]);
+  else if(rank<=3) vibratePattern([80,40,120]);
+  else vibratePattern([200]);
 
-  // Trophy change display
-  let trophyStr;
-  if(delta>0) trophyStr=`+${delta} 🏆`;
-  else if(delta<0) trophyStr=`${delta} 🏆`;
-  else trophyStr=`±0 🏆`;
-
-  const trophyColors={pos:"#a8ff3e",neg:"#f3722c",zero:"#a0a0c0"};
-  const trophyColor=delta>0?trophyColors.pos:delta<0?trophyColors.neg:trophyColors.zero;
-
-  const go=document.getElementById("gameOver");
-  go.style.display="flex";
-  document.getElementById("hamburger-btn").style.display="flex";
-  document.getElementById("go-rank-badge").textContent=badge+" TOP "+rank;
-  const titleEl=document.getElementById("go-title");
-  titleEl.textContent=title;
-  titleEl.style.color=rank===1?"#f9c74f":rank<=3?"#f3722c":"#fff";
-  const tcEl=document.getElementById("go-trophy-change");
-  tcEl.textContent=trophyStr;
-  tcEl.style.color=trophyColor;
-  document.getElementById("go-time").textContent=gameTime;
-  document.getElementById("go-kills").textContent=kills;
-  document.getElementById("go-total").textContent=totalEnemies;
-  document.getElementById("go-gems").textContent=sessionGems;
-  document.getElementById("go-coins").textContent=sessionCoins;
-  document.getElementById("go-trophies").textContent=trophies;
+  // Show new post-game stats screen
+  showPostGameStats(rank, delta);
 }
 
 function winGame(){
@@ -4592,7 +4800,263 @@ function endGame(){
 
 updateUI();
 
-// ===================== AUDIO SYSTEM =====================
+// ===================== VIBRATION SYSTEM =====================
+function vibratePattern(pattern){
+  try{
+    const el=document.getElementById("set-vibration");
+    if(el&&!el.checked) return;
+    if(navigator.vibrate) navigator.vibrate(pattern);
+  }catch(e){}
+}
+function vibrate(ms){vibratePattern([ms]);}
+function testVibration(){
+  vibratePattern([50,80,50,80,150]);
+}
+
+// ===================== POST-GAME STATS =====================
+function showPostGameStats(rank, delta){
+  const rankBadges={1:"🥇",2:"🥈",3:"🥉"};
+  const badge=rankBadges[rank]||(rank<=5?"🏅":"💀");
+  const titles={1:"VICTOIRE !",2:"2ème place",3:"3ème place",4:"4ème place",5:"5ème place",
+    6:"6ème place",7:"7ème place",8:"8ème place",9:"9ème place",10:"10ème place",11:"11ème place"};
+  const title=titles[rank]||("Top "+rank);
+  const trophyStr=delta>0?`+${delta} 🏆`:delta<0?`${delta} 🏆`:`±0 🏆`;
+  const trophyColor=delta>0?"#a8ff3e":delta<0?"#f3722c":"#a0a0c0";
+
+  // Header
+  document.getElementById("pgs-badge").textContent=badge;
+  const titleEl=document.getElementById("pgs-title");
+  titleEl.textContent=title;
+  titleEl.style.color=rank===1?"#f9c74f":rank<=3?"#f3722c":"#fff";
+  const tcEl=document.getElementById("pgs-trophy-delta");
+  tcEl.textContent=trophyStr; tcEl.style.color=trophyColor;
+
+  // Cards
+  document.getElementById("pgs-time").textContent=gameTime+"s";
+  document.getElementById("pgs-kills").textContent=kills+"/"+totalEnemies;
+  document.getElementById("pgs-gems").textContent=sessionGems;
+  document.getElementById("pgs-coins").textContent="+"+sessionCoins;
+
+  // Stars (0–3 based on performance)
+  const killRatio=kills/Math.max(1,totalEnemies);
+  const timeRatio=gameTime/Math.max(1,190);
+  const score=(killRatio*0.5+timeRatio*0.3+(rank<=3?0.2:0));
+  const stars=score>=0.7?3:score>=0.35?2:score>=0.1?1:0;
+  document.querySelectorAll(".pgs-star").forEach((s,i)=>{
+    s.classList.toggle("lit",i<stars);
+  });
+
+  // Performance bars (animated after slight delay)
+  const killPct=Math.round(killRatio*100);
+  const timePct=Math.round(Math.min(100,timeRatio*100));
+  const gemPct=Math.round(Math.min(100,sessionGems/Math.max(1,totalEnemies)*100));
+  setTimeout(()=>{
+    document.getElementById("pgs-bar-kills").style.width=killPct+"%";
+    document.getElementById("pgs-kills-pct").textContent=killPct+"%";
+    document.getElementById("pgs-bar-time").style.width=timePct+"%";
+    document.getElementById("pgs-time-pct").textContent=timePct+"%";
+    document.getElementById("pgs-bar-gems").style.width=gemPct+"%";
+    document.getElementById("pgs-gems-pct").textContent=gemPct+"%";
+  }, 350);
+
+  // Hero XP / rank section
+  const heroTrophies=hData[selected].trophies||0;
+  const heroRank=getHeroRank(heroTrophies);
+  const nextRank=getNextRank(heroTrophies);
+  const hero=heroes[selected];
+  document.getElementById("pgs-hero-name").textContent=hero.emoji+" "+hero.name;
+  document.getElementById("pgs-hero-rank").textContent=heroRank.icon+" "+heroRank.name;
+  const xpPct=nextRank?Math.round((heroTrophies-heroRank.min)/(nextRank.min-heroRank.min)*100):100;
+  setTimeout(()=>{
+    document.getElementById("pgs-xp-bar-fill").style.width=Math.min(100,xpPct)+"%";
+  },500);
+  document.getElementById("pgs-xp-cur").textContent=heroTrophies+" 🏆";
+  document.getElementById("pgs-xp-next").textContent=nextRank?"Prochain rang: "+nextRank.min+" 🏆":"Rang max atteint !";
+
+  // Highlights / médailles
+  const highlights=[];
+  if(rank===1) highlights.push("🏆 Tu as remporté la partie !");
+  if(kills>=totalEnemies) highlights.push("👾 Nettoyage complet — tous les ennemis éliminés !");
+  if(kills>=Math.ceil(totalEnemies*0.7)) highlights.push("⚔️ Destructeur — "+kills+" éliminations !");
+  if(sessionGems>=5) highlights.push("💎 Chasseur de gemmes — "+sessionGems+" gemmes !");
+  if(gameTime>=120) highlights.push("⏱ Survivant — "+gameTime+"s de survie !");
+  if(sessionCoins>=20) highlights.push("🪙 Ramasseur — "+sessionCoins+" pièces gagnées !");
+  if(highlights.length===0) highlights.push("💪 Continue, tu vas t'améliorer !");
+  const hl=document.getElementById("pgs-highlights-list");
+  hl.innerHTML=highlights.map(h=>`<div class="pgs-highlight"><span>${h}</span></div>`).join("");
+
+  // Show the overlay
+  document.getElementById("postgame-stats").style.display="flex";
+  document.getElementById("hamburger-btn").style.display="flex";
+}
+
+function pgsGoMenu(){
+  document.getElementById("postgame-stats").style.display="none";
+  goMenu();
+}
+function pgsReplay(){
+  document.getElementById("postgame-stats").style.display="none";
+  startGame();
+}
+
+// ===================== TUTORIEL INTERACTIF =====================
+const TUTORIAL_STEPS=[
+  {
+    icon:"🎮", title:"Bienvenue dans BrawlHero !",
+    text:"C'est ta première partie. Laisse-moi t'expliquer les bases en 6 étapes rapides !",
+    spotlight:null, arrow:"bottom", finger:false
+  },
+  {
+    icon:"🕹️", title:"Joystick de déplacement",
+    text:"Appuie et glisse sur la partie <b>gauche</b> de l'écran pour déplacer ton héros.",
+    spotlight:{side:"left"}, arrow:"bottom", finger:true, fingerSide:"left"
+  },
+  {
+    icon:"🔫", title:"Joystick de tir",
+    text:"Appuie et glisse sur la partie <b>droite</b> de l'écran pour viser et tirer automatiquement.",
+    spotlight:{side:"right"}, arrow:"bottom", finger:true, fingerSide:"right"
+  },
+  {
+    icon:"⚡", title:"Super pouvoir",
+    text:"Quand le bouton SUPER est doré, tape dessus pour déclencher ta capacité spéciale ! Elle se recharge en faisant des dégâts.",
+    spotlight:{id:"super-btn-wrap"}, arrow:"left", finger:false
+  },
+  {
+    icon:"💎", title:"Collecte les gemmes",
+    text:"Les caisses en bois contiennent des gemmes 💎. Casse-les et ramasse les gemmes pour gagner des bonus de dégâts et de vie !",
+    spotlight:null, arrow:"bottom", finger:false
+  },
+  {
+    icon:"❤️", title:"Surveille ta vie",
+    text:"Quand ta barre de vie descend à zéro, c'est terminé. Collecte des gemmes pour régénérer ta vie !",
+    spotlight:{id:"health-bar-wrap"}, arrow:"top", finger:false
+  },
+  {
+    icon:"🏆", title:"Prêt à jouer !",
+    text:"Élimine tous tes adversaires pour remporter la victoire. Bonne chance !",
+    spotlight:null, arrow:"bottom", finger:false
+  }
+];
+let tutStep=0;
+let tutActive=false;
+
+function isTutorialNeeded(){
+  try{ return !localStorage.getItem("brawlhero_tut_done"); }catch(e){return false;}
+}
+function markTutorialDone(){
+  try{ localStorage.setItem("brawlhero_tut_done","1"); }catch(e){}
+}
+
+function startTutorial(){
+  if(!isTutorialNeeded()) return;
+  tutStep=0; tutActive=true;
+  document.getElementById("tutorial-overlay").style.display="block";
+  document.getElementById("tutorial-overlay").classList.add("active");
+  renderTutorialStep();
+}
+
+function renderTutorialStep(){
+  const step=TUTORIAL_STEPS[tutStep];
+  const overlay=document.getElementById("tutorial-overlay");
+  const card=document.getElementById("tutorial-card");
+  const spot=document.getElementById("tutorial-spotlight");
+  const finger=document.getElementById("tutorial-finger");
+
+  // Icon + text
+  document.getElementById("tutorial-step-icon").textContent=step.icon;
+  document.getElementById("tutorial-step-title").textContent=step.title;
+  document.getElementById("tutorial-step-text").innerHTML=step.text;
+
+  // Progress dots
+  const prog=document.getElementById("tutorial-progress");
+  prog.innerHTML=TUTORIAL_STEPS.map((_,i)=>
+    `<div class="tut-dot ${i<tutStep?"done":i===tutStep?"active":""}"></div>`).join("");
+
+  // Next button label
+  const nextBtn=document.getElementById("tutorial-next");
+  nextBtn.textContent=tutStep===TUTORIAL_STEPS.length-1?"🎮 Jouer !":"Suivant ▶";
+
+  // Spotlight positioning
+  const W2=window.innerWidth, H2=window.innerHeight;
+  let sx=W2/2, sy=H2/2, sr=90;
+
+  if(step.spotlight){
+    if(step.spotlight.id){
+      const el=document.getElementById(step.spotlight.id);
+      if(el){
+        const r=el.getBoundingClientRect();
+        sx=r.left+r.width/2; sy=r.top+r.height/2;
+        sr=Math.max(r.width,r.height)*0.75+20;
+      }
+    } else if(step.spotlight.side){
+      sx=step.spotlight.side==="left"?W2*0.18:W2*0.82;
+      sy=H2-110; sr=75;
+    }
+    spot.style.display="block";
+    spot.style.width=sr*2+"px"; spot.style.height=sr*2+"px";
+    spot.style.left=(sx-sr)+"px"; spot.style.top=(sy-sr)+"px";
+  } else {
+    spot.style.display="none";
+  }
+
+  // Finger indicator
+  if(step.finger&&step.fingerSide){
+    const fx=step.fingerSide==="left"?W2*0.18:W2*0.82;
+    const fy=H2-140;
+    finger.style.display="block";
+    finger.style.left=(fx-18)+"px"; finger.style.top=(fy-36)+"px";
+  } else {
+    finger.style.display="none";
+  }
+
+  // Card positioning — place near spotlight or center
+  card.className="";
+  let cardX=W2/2-140, cardY=H2/2-80;
+  if(step.spotlight){
+    if(step.spotlight.side){
+      // Place card above joystick area
+      cardX=W2/2-140; cardY=H2-310;
+      card.classList.add("arrow-bottom");
+    } else if(step.spotlight.id){
+      const el=document.getElementById(step.spotlight.id);
+      if(el){
+        const r=el.getBoundingClientRect();
+        if(step.arrow==="left"){
+          cardX=r.right+20; cardY=r.top+r.height/2-80;
+          card.classList.add("arrow-left");
+        } else if(step.arrow==="top"){
+          cardX=Math.min(W2-300,Math.max(10,r.left+r.width/2-140));
+          cardY=r.bottom+20;
+          card.classList.add("arrow-top");
+        }
+      }
+    }
+  } else {
+    cardX=W2/2-140; cardY=H2/2-80;
+    card.classList.add("arrow-bottom");
+  }
+  cardX=Math.max(10,Math.min(W2-300,cardX));
+  cardY=Math.max(10,Math.min(H2-200,cardY));
+  card.style.left=cardX+"px"; card.style.top=cardY+"px";
+}
+
+function tutorialNext(){
+  tutStep++;
+  if(tutStep>=TUTORIAL_STEPS.length){
+    skipTutorial(); return;
+  }
+  renderTutorialStep();
+}
+
+function skipTutorial(){
+  tutActive=false;
+  markTutorialDone();
+  document.getElementById("tutorial-overlay").style.display="none";
+  document.getElementById("tutorial-overlay").classList.remove("active");
+}
+
+// Hook tutorial into startGame
+const _origStartGame=typeof startGame==="function"?startGame:null;
 const AudioCtx=window.AudioContext||window.webkitAudioContext;
 let audioCtx=null;
 let musicNodes=[];  // tous les nœuds actifs pour pouvoir les stopper
