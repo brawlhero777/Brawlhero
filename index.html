@@ -4390,26 +4390,28 @@ function draw(){
   // Player
   draw3DHero(ctx, playerX, playerY, 22, heroes[selected].emoji, heroColor, true);
 
-  // Aim line — cercles de la taille de la balle, portée du héros
+  // Aim line — cercles taille balle + portée du héros
   const aimLen=Math.sqrt(rjDX*rjDX+rjDY*rjDY);
   if(aimLen>JOY_DEAD){
     ctx.save();
-    const shotR=heroes[selected].shot.r;
-    const maxDist=100+shotR*(150/11);
-    const nx=rjDX/aimLen, ny=rjDY/aimLen;
-    const spacing=shotR*3.2;
-    const numDots=Math.max(1,Math.floor(maxDist/spacing));
-    for(let i=1;i<=numDots;i++){
-      const t=i/numDots;
-      const cx2=playerX+nx*spacing*i;
-      const cy2=playerY+ny*spacing*i;
-      ctx.globalAlpha=(1-t*0.65)*0.55;
+    const _sR=heroes[selected].shot.r;
+    const _mD=100+_sR*(150/11);
+    const _nx=rjDX/aimLen, _ny=rjDY/aimLen;
+    const _sp=_sR*3.2;
+    const _nd=Math.max(1,Math.floor(_mD/_sp));
+    for(let _i=1;_i<=_nd;_i++){
+      const _t=_i/_nd;
+      ctx.globalAlpha=(1-_t*0.65)*0.6;
       ctx.shadowBlur=10; ctx.shadowColor=heroColor;
       ctx.fillStyle=heroColor;
-      ctx.beginPath(); ctx.arc(cx2,cy2,shotR,0,Math.PI*2); ctx.fill();
-      ctx.globalAlpha*=0.4;
+      ctx.beginPath();
+      ctx.arc(playerX+_nx*_sp*_i, playerY+_ny*_sp*_i, _sR, 0, Math.PI*2);
+      ctx.fill();
+      ctx.globalAlpha*=0.35;
       ctx.fillStyle="#fff";
-      ctx.beginPath(); ctx.arc(cx2-shotR*0.28,cy2-shotR*0.28,shotR*0.32,0,Math.PI*2); ctx.fill();
+      ctx.beginPath();
+      ctx.arc(playerX+_nx*_sp*_i-_sR*0.28, playerY+_ny*_sp*_i-_sR*0.28, _sR*0.32, 0, Math.PI*2);
+      ctx.fill();
     }
     ctx.restore();
   }
