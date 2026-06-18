@@ -713,6 +713,68 @@ canvas{display:block;touch-action:none;}
   font-family:'Boogaloo',cursive;font-size:20px;cursor:pointer;
   box-shadow:0 5px 20px rgba(249,199,79,.3);}
 
+/* ===== QUÊTES QUOTIDIENNES ===== */
+#panel-quests{display:none;position:fixed;inset:0;background:rgba(10,10,30,.97);color:#fff;z-index:50000;overflow-y:auto;}
+.quest-card{background:linear-gradient(145deg,#1f1f3a,#2a2a4a);border:2px solid rgba(255,255,255,.1);border-radius:18px;padding:16px 18px;margin-bottom:12px;transition:.2s;}
+.quest-card.done{border-color:rgba(168,255,62,.4);background:linear-gradient(145deg,#1a2a1a,#202a20);}
+.quest-card.claimed{opacity:.5;border-color:rgba(255,255,255,.06);}
+.quest-header{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+.quest-icon{font-size:32px;line-height:1;}
+.quest-info{flex:1;}
+.quest-title{font-family:'Boogaloo',cursive;font-size:17px;color:#fff;line-height:1.2;}
+.quest-desc{font-size:11px;color:#a0a0c0;margin-top:3px;}
+.quest-reward{font-family:'Boogaloo',cursive;font-size:14px;color:#f9c74f;white-space:nowrap;}
+.quest-bar-bg{height:8px;background:rgba(255,255,255,.1);border-radius:4px;overflow:hidden;margin-bottom:8px;}
+.quest-bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#4cc9f0,#a8ff3e);transition:width .5s ease;}
+.quest-progress-row{display:flex;justify-content:space-between;font-size:11px;color:#a0a0c0;margin-bottom:10px;}
+.quest-claim-btn{width:100%;padding:9px;border:none;border-radius:12px;font-family:'Boogaloo',cursive;font-size:16px;cursor:pointer;transition:.15s;}
+.quest-claim-btn.ready{background:linear-gradient(135deg,#a8ff3e,#f9c74f);color:#1a1a2e;}
+.quest-claim-btn.ready:hover{transform:scale(1.03);}
+.quest-claim-btn.pending{background:rgba(255,255,255,.08);color:#606080;cursor:not-allowed;}
+.quest-claim-btn.claimed-lbl{background:rgba(168,255,62,.1);color:#a8ff3e;cursor:default;border:1px solid rgba(168,255,62,.3);}
+#quests-reset-timer{text-align:center;font-size:12px;color:#606080;margin-bottom:16px;}
+
+/* ===== COFFRES À TIMER ===== */
+#panel-chests{display:none;position:fixed;inset:0;background:rgba(10,10,30,.97);color:#fff;z-index:50000;overflow-y:auto;}
+.chest-card{background:linear-gradient(145deg,#1f1f3a,#2a2a4a);border:2px solid rgba(255,255,255,.1);border-radius:18px;padding:18px;margin-bottom:12px;text-align:center;transition:.2s;position:relative;overflow:hidden;}
+.chest-card.ready-chest{border-color:rgba(249,199,79,.5);box-shadow:0 0 20px rgba(249,199,79,.2);}
+.chest-card.locked-chest{opacity:.65;}
+.chest-emoji{font-size:52px;display:block;margin-bottom:8px;line-height:1;}
+.chest-name{font-family:'Boogaloo',cursive;font-size:18px;color:#fff;margin-bottom:4px;}
+.chest-desc{font-size:11px;color:#a0a0c0;margin-bottom:10px;}
+.chest-timer{font-family:'Boogaloo',cursive;font-size:22px;color:#4cc9f0;margin-bottom:8px;}
+.chest-timer.done-timer{color:#a8ff3e;}
+.chest-timer-bar-bg{height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden;margin-bottom:12px;}
+.chest-timer-bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,#f3722c,#f9c74f);transition:width 1s linear;}
+.chest-open-btn{width:100%;padding:10px;border:none;border-radius:12px;font-family:'Boogaloo',cursive;font-size:17px;cursor:pointer;transition:.15s;}
+.chest-open-btn.open-ready{background:linear-gradient(135deg,#f9c74f,#f3722c);color:#1a1a2e;box-shadow:0 4px 16px rgba(249,199,79,.3);}
+.chest-open-btn.open-ready:hover{transform:scale(1.03);}
+.chest-open-btn.open-locked{background:rgba(255,255,255,.07);color:#606080;cursor:not-allowed;}
+.chest-slot-empty{border:2px dashed rgba(255,255,255,.1);border-radius:18px;padding:28px;text-align:center;color:#404060;font-size:13px;margin-bottom:12px;}
+#chests-earn-info{background:rgba(76,201,240,.07);border:1px solid rgba(76,201,240,.2);border-radius:14px;padding:12px 16px;font-size:12px;color:#a0c4ff;margin-bottom:16px;line-height:1.7;}
+
+/* ===== SAISON ===== */
+#panel-season{display:none;position:fixed;inset:0;background:rgba(10,10,30,.97);color:#fff;z-index:50000;overflow-y:auto;}
+#season-banner{background:linear-gradient(135deg,rgba(249,199,79,.15),rgba(243,114,44,.1));border:1px solid rgba(249,199,79,.3);border-radius:18px;padding:18px;margin-bottom:18px;text-align:center;}
+#season-name{font-family:'Boogaloo',cursive;font-size:28px;color:#f9c74f;margin-bottom:4px;}
+#season-days{font-size:13px;color:#a0a0c0;margin-bottom:10px;}
+#season-xp-bar-bg{height:12px;background:rgba(255,255,255,.1);border-radius:6px;overflow:hidden;margin-bottom:6px;}
+#season-xp-bar-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,#f9c74f,#f3722c);transition:width .8s ease;}
+#season-xp-row{display:flex;justify-content:space-between;font-size:11px;color:#a0a0c0;}
+.season-track{display:flex;flex-direction:column;gap:10px;}
+.season-node{display:flex;align-items:center;gap:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:12px 16px;transition:.2s;}
+.season-node.unlocked{border-color:rgba(249,199,79,.4);background:rgba(249,199,79,.06);}
+.season-node.current-node{border-color:rgba(76,201,240,.5);background:rgba(76,201,240,.07);box-shadow:0 0 14px rgba(76,201,240,.15);}
+.sn-level{font-family:'Boogaloo',cursive;font-size:18px;min-width:36px;color:#a0a0c0;}
+.season-node.unlocked .sn-level{color:#f9c74f;}
+.sn-reward{font-size:28px;}
+.sn-info{flex:1;}
+.sn-name{font-family:'Boogaloo',cursive;font-size:14px;}
+.sn-pts{font-size:11px;color:#a0a0c0;margin-top:2px;}
+.sn-status{font-size:20px;}
+@keyframes seasonShine{0%,100%{box-shadow:0 0 10px rgba(249,199,79,.2)}50%{box-shadow:0 0 24px rgba(249,199,79,.5),0 0 40px rgba(243,114,44,.2)}}
+.season-node.unlocked{animation:seasonShine 2s ease-in-out infinite;}
+
 /* ===== INDICATOR VIBRATION (dans les settings) ===== */
 #vibration-test-btn{
   padding:9px 18px;border:none;border-radius:12px;
@@ -828,11 +890,57 @@ canvas{display:block;touch-action:none;}
   </div>
 </div>
 <div id="hamburger-menu">
+  <div class="hmenu-item" onclick="closeHamburgerMenu();openQuests()">📋 Quêtes <span id="hmenu-quests-badge" style="background:#a8ff3e;color:#1a1a2e;border-radius:10px;font-size:11px;padding:2px 7px;font-family:'Boogaloo',cursive;margin-left:4px;display:none;">NEW</span></div>
+  <div class="hmenu-item" onclick="closeHamburgerMenu();openChests()">📦 Coffres <span id="hmenu-chests-badge" style="background:#f9c74f;color:#1a1a2e;border-radius:10px;font-size:11px;padding:2px 7px;font-family:'Boogaloo',cursive;margin-left:4px;display:none;">!</span></div>
+  <div class="hmenu-item" onclick="closeHamburgerMenu();openSeason()">🏅 Saison</div>
+  <div class="hmenu-sep"></div>
   <div class="hmenu-item" onclick="closeHamburgerMenu();openSettings()">⚙️ Paramètres</div>
   <div class="hmenu-item" onclick="closeHamburgerMenu();openHistory()">📜 Historique</div>
   <div class="hmenu-item" onclick="closeHamburgerMenu();openLeaderboard()">🌍 Classement Mondial</div>
   <div class="hmenu-sep"></div>
   <div class="hmenu-item" id="hmenu-account-btn" onclick="closeHamburgerMenu();openAccountPanel()">🔑 Connexion / Compte</div>
+</div>
+
+<!-- PANNEAU QUÊTES -->
+<div id="panel-quests">
+  <div style="max-width:480px;margin:0 auto;padding:28px 20px 40px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <h2 style="font-family:'Boogaloo',cursive;font-size:34px;color:#a8ff3e;">📋 Quêtes du Jour</h2>
+      <button onclick="closePanelQuests()" style="background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.3);color:#fff;font-size:20px;width:42px;height:42px;border-radius:50%;cursor:pointer;font-weight:bold;">✕</button>
+    </div>
+    <div id="quests-reset-timer">Réinitialisation dans : <strong id="quests-countdown">--:--:--</strong></div>
+    <div id="quests-list"></div>
+  </div>
+</div>
+
+<!-- PANNEAU COFFRES -->
+<div id="panel-chests">
+  <div style="max-width:480px;margin:0 auto;padding:28px 20px 40px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <h2 style="font-family:'Boogaloo',cursive;font-size:34px;color:#f9c74f;">📦 Coffres</h2>
+      <button onclick="closePanelChests()" style="background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.3);color:#fff;font-size:20px;width:42px;height:42px;border-radius:50%;cursor:pointer;font-weight:bold;">✕</button>
+    </div>
+    <div id="chests-earn-info">🎮 Gagne des coffres en jouant :<br>🥇 Victoire → Coffre 4h &nbsp;|&nbsp; 🥈 Top 3 → Coffre 2h &nbsp;|&nbsp; Partie jouée → Coffre 8h<br>Tu peux stocker jusqu'à <strong>4 coffres</strong> en même temps.</div>
+    <div id="chests-list"></div>
+  </div>
+</div>
+
+<!-- PANNEAU SAISON -->
+<div id="panel-season">
+  <div style="max-width:480px;margin:0 auto;padding:28px 20px 40px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <h2 style="font-family:'Boogaloo',cursive;font-size:34px;color:#f9c74f;">🏅 Saison</h2>
+      <button onclick="closePanelSeason()" style="background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.3);color:#fff;font-size:20px;width:42px;height:42px;border-radius:50%;cursor:pointer;font-weight:bold;">✕</button>
+    </div>
+    <div id="season-banner">
+      <div id="season-name">⚡ Saison 1 — Orage</div>
+      <div id="season-days">Temps restant : <strong id="season-days-left">--</strong></div>
+      <div style="font-size:12px;color:#a0a0c0;margin-bottom:10px;">Niveau <strong id="season-level">1</strong> / 30 &nbsp;•&nbsp; <span id="season-xp-cur">0</span> / <span id="season-xp-next">100</span> pts</div>
+      <div id="season-xp-bar-bg"><div id="season-xp-bar-fill" style="width:0%"></div></div>
+      <div id="season-xp-row"><span>Niveau <span id="season-lvl-lo">1</span></span><span>Niveau <span id="season-lvl-hi">2</span></span></div>
+    </div>
+    <div id="season-track"></div>
+  </div>
 </div>
 
 <!-- PANNEAU PARAMÈTRES -->
@@ -1522,24 +1630,7 @@ canvas{display:block;touch-action:none;}
   </div>
 </div>
 
-<!-- CONFIRM RESET MODAL -->
-<div id="reset-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);backdrop-filter:blur(10px);
-  z-index:9999;flex-direction:column;align-items:center;justify-content:center;color:#fff;text-align:center;padding:30px;">
-  <div style="font-size:60px;margin-bottom:12px;">⚠️</div>
-  <div style="font-family:'Boogaloo',cursive;font-size:32px;color:#f3722c;margin-bottom:8px;">Réinitialiser le jeu ?</div>
-  <div style="font-size:14px;color:#a0a0c0;max-width:280px;line-height:1.6;margin-bottom:24px;">
-    Toute ta progression sera effacée : trophées, pièces, perles, personnages débloqués et niveaux.
-    <br><strong style="color:#ff8888;">Cette action est irréversible.</strong>
-  </div>
-  <div style="display:flex;gap:14px;">
-    <button onclick="confirmReset()" style="padding:12px 28px;border:none;border-radius:50px;
-      background:linear-gradient(135deg,#f3722c,#e63946);color:#fff;font-family:'Boogaloo',cursive;
-      font-size:20px;cursor:pointer;box-shadow:0 4px 20px rgba(243,114,44,.4);">🗑️ Oui, effacer</button>
-    <button onclick="cancelReset()" style="padding:12px 28px;border:2px solid rgba(255,255,255,.2);border-radius:50px;
-      background:rgba(255,255,255,.08);color:#fff;font-family:'Boogaloo',cursive;
-      font-size:20px;cursor:pointer;">Annuler</button>
-  </div>
-</div>
+
 
 <script>
 // ===================== DATA =====================
@@ -8574,10 +8665,483 @@ async function loginAccount(){
   }
 }
 
-// Refresh profile button whenever menu is shown
-const _menuObserver = new MutationObserver(()=>{
-  if(document.getElementById("menu")?.style.display==="flex") updateProfileBtn();
+// =====================================================================
+// ===== QUÊTES QUOTIDIENNES ===========================================
+// =====================================================================
+const QUEST_DEFINITIONS = [
+  {id:'kills10',   icon:'⚔️',  title:'Éliminateur',         desc:'Élimine 10 ennemis en parties',   target:10, reward:{coins:30},  rewardLabel:'+30 🪙'},
+  {id:'kills25',   icon:'💀',  title:'Destructeur',          desc:'Élimine 25 ennemis en parties',   target:25, reward:{coins:60},  rewardLabel:'+60 🪙'},
+  {id:'games3',    icon:'🎮',  title:'Joueur assidu',        desc:'Joue 3 parties',                  target:3,  reward:{coins:20},  rewardLabel:'+20 🪙'},
+  {id:'wins1',     icon:'🏆',  title:'Premier sang',         desc:'Remporte 1 victoire',             target:1,  reward:{coins:50},  rewardLabel:'+50 🪙'},
+  {id:'top3x2',    icon:'🥉',  title:'Podium régulier',      desc:'Termine dans le top 3 (×2)',      target:2,  reward:{coins:40},  rewardLabel:'+40 🪙'},
+  {id:'gems15',    icon:'💎',  title:'Chasseur de gemmes',   desc:'Collecte 15 gemmes',              target:15, reward:{pearls:5},  rewardLabel:'+5 🔮'},
+  {id:'coins50',   icon:'🪙',  title:'Économe',              desc:'Gagne 50 pièces en parties',      target:50, reward:{pearls:3},  rewardLabel:'+3 🔮'},
+  {id:'survive90', icon:'⏱',   title:'Survivant',            desc:'Survie 90s dans une partie',      target:90, reward:{coins:35},  rewardLabel:'+35 🪙'},
+  {id:'chest1',    icon:'📦',  title:'Ouvreur',              desc:'Ouvre 1 coffre',                  target:1,  reward:{coins:25},  rewardLabel:'+25 🪙'},
+];
+
+function _getQuestSave(){
+  try{return JSON.parse(localStorage.getItem('bh_quests_v1')||'null');}catch(e){return null;}
+}
+function _setQuestSave(d){
+  try{localStorage.setItem('bh_quests_v1', JSON.stringify(d));}catch(e){}
+}
+
+function _getTodayKey(){
+  const d=new Date(); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+function _initDailyQuests(){
+  const saved=_getQuestSave();
+  const today=_getTodayKey();
+  if(saved && saved.day===today) return saved;
+  // Pick 4 random quests
+  const shuffled=[...QUEST_DEFINITIONS].sort(()=>Math.random()-.5).slice(0,4);
+  const fresh={
+    day: today,
+    quests: shuffled.map(q=>({...q, progress:0, claimed:false}))
+  };
+  _setQuestSave(fresh);
+  return fresh;
+}
+
+function _saveQuestProgress(data){ _setQuestSave(data); }
+
+// Called after each game to update quest progress
+function updateQuestProgress({kills=0, won=false, rank=99, gems=0, coins=0, surviveTime=0}={}){
+  const data=_initDailyQuests();
+  let changed=false;
+  for(const q of data.quests){
+    if(q.claimed) continue;
+    const prev=q.progress;
+    if(q.id==='kills10'||q.id==='kills25') q.progress=Math.min(q.target, q.progress+kills);
+    if(q.id==='games3') q.progress=Math.min(q.target, q.progress+1);
+    if(q.id==='wins1' && won) q.progress=Math.min(q.target, q.progress+1);
+    if(q.id==='top3x2' && rank<=3) q.progress=Math.min(q.target, q.progress+1);
+    if(q.id==='gems15') q.progress=Math.min(q.target, q.progress+gems);
+    if(q.id==='coins50') q.progress=Math.min(q.target, q.progress+coins);
+    if(q.id==='survive90') q.progress=Math.max(q.progress, Math.min(q.target, surviveTime));
+    if(q.id==='chest1'&&q.progress>0) q.progress=Math.min(q.target, q.progress); // updated by openChest
+    if(q.progress!==prev) changed=true;
+  }
+  if(changed) _saveQuestProgress(data);
+  _updateQuestBadge(data);
+}
+
+function _updateQuestBadge(data){
+  const badge=document.getElementById('hmenu-quests-badge');
+  if(!badge) return;
+  const hasReady=data.quests.some(q=>!q.claimed && q.progress>=q.target);
+  badge.style.display=hasReady?'inline':'none';
+}
+
+function openQuests(){
+  closeAllPanels();
+  closeHamburgerMenu();
+  document.getElementById('hamburger-btn').style.display='none';
+  document.getElementById('panel-quests').style.display='block';
+  renderQuests();
+  startQuestCountdown();
+}
+function closePanelQuests(){
+  document.getElementById('panel-quests').style.display='none';
+  showHamburgerIfMenu();
+}
+
+function renderQuests(){
+  const data=_initDailyQuests();
+  _updateQuestBadge(data);
+  const list=document.getElementById('quests-list');
+  list.innerHTML=data.quests.map((q,i)=>{
+    const pct=Math.round(Math.min(100,q.progress/q.target*100));
+    const done=q.progress>=q.target;
+    let btnHtml='';
+    if(q.claimed){
+      btnHtml=`<button class="quest-claim-btn claimed-lbl" disabled>✅ Récompense réclamée</button>`;
+    } else if(done){
+      btnHtml=`<button class="quest-claim-btn ready" onclick="claimQuest(${i})">🎁 Réclamer ${q.rewardLabel}</button>`;
+    } else {
+      btnHtml=`<button class="quest-claim-btn pending" disabled>🔒 ${q.progress} / ${q.target}</button>`;
+    }
+    return `<div class="quest-card${q.claimed?' claimed':done?' done':''}">
+      <div class="quest-header">
+        <div class="quest-icon">${q.icon}</div>
+        <div class="quest-info">
+          <div class="quest-title">${q.title}</div>
+          <div class="quest-desc">${q.desc}</div>
+        </div>
+        <div class="quest-reward">${q.rewardLabel}</div>
+      </div>
+      <div class="quest-bar-bg"><div class="quest-bar-fill" style="width:${pct}%"></div></div>
+      <div class="quest-progress-row"><span>${q.progress} / ${q.target}</span><span>${pct}%</span></div>
+      ${btnHtml}
+    </div>`;
+  }).join('');
+}
+
+function claimQuest(idx){
+  const data=_initDailyQuests();
+  const q=data.quests[idx];
+  if(!q||q.claimed||q.progress<q.target) return;
+  q.claimed=true;
+  // Grant reward
+  if(q.reward.coins){ money+=q.reward.coins; }
+  if(q.reward.pearls){ pearls+=q.reward.pearls; }
+  saveState(); updateUI();
+  _saveQuestProgress(data);
+  renderQuests();
+  // Flash
+  const fb=document.createElement('div');
+  fb.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(168,255,62,.95);color:#1a1a2e;font-family:\'Boogaloo\',cursive;font-size:28px;border-radius:20px;padding:16px 32px;z-index:99999;pointer-events:none;animation:popIn .4s ease forwards;';
+  fb.textContent='🎁 '+q.rewardLabel+' !';
+  document.body.appendChild(fb);
+  setTimeout(()=>fb.remove(),1800);
+}
+
+let _questCdInterval=null;
+function startQuestCountdown(){
+  clearInterval(_questCdInterval);
+  function tick(){
+    const el=document.getElementById('quests-countdown');
+    if(!el){clearInterval(_questCdInterval);return;}
+    const now=new Date();
+    const midnight=new Date(); midnight.setHours(24,0,0,0);
+    let diff=Math.floor((midnight-now)/1000);
+    const h=Math.floor(diff/3600); diff%=3600;
+    const m=Math.floor(diff/60); const s=diff%60;
+    el.textContent=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }
+  tick(); _questCdInterval=setInterval(tick,1000);
+}
+
+// =====================================================================
+// ===== COFFRES AVEC TIMER ============================================
+// =====================================================================
+const CHEST_TYPES=[
+  {id:'wood', emoji:'📦', name:'Coffre en Bois',   desc:'Récompenses basiques',       timerMs:2*60*60*1000, coins:[15,30],  pearls:[0,2]},
+  {id:'gold', emoji:'🪙',  name:'Coffre en Or',    desc:'Récompenses améliorées',     timerMs:4*60*60*1000, coins:[40,80],  pearls:[2,5]},
+  {id:'mega', emoji:'💎',  name:'Coffre Méga',     desc:'Récompenses exceptionnelles',timerMs:8*60*60*1000, coins:[80,150], pearls:[5,12]},
+];
+const MAX_CHEST_SLOTS=4;
+
+function _getChestSave(){
+  try{return JSON.parse(localStorage.getItem('bh_chests_v1')||'[]');}catch(e){return[];}
+}
+function _setChestSave(d){
+  try{localStorage.setItem('bh_chests_v1',JSON.stringify(d));}catch(e){}
+}
+
+function _addChest(typeId){
+  const slots=_getChestSave();
+  if(slots.length>=MAX_CHEST_SLOTS) return false;
+  const type=CHEST_TYPES.find(t=>t.id===typeId)||CHEST_TYPES[0];
+  slots.push({typeId, name:type.name, emoji:type.emoji, desc:type.desc,
+    timerMs:type.timerMs, startedAt:Date.now(), coins:type.coins, pearls:type.pearls});
+  _setChestSave(slots);
+  _updateChestBadge();
+  return true;
+}
+
+function _updateChestBadge(){
+  const badge=document.getElementById('hmenu-chests-badge');
+  if(!badge) return;
+  const slots=_getChestSave();
+  const hasReady=slots.some(s=>(Date.now()-s.startedAt)>=s.timerMs);
+  badge.style.display=hasReady?'inline':'none';
+}
+
+function openChests(){
+  closeAllPanels();
+  closeHamburgerMenu();
+  document.getElementById('hamburger-btn').style.display='none';
+  document.getElementById('panel-chests').style.display='block';
+  renderChests();
+  if(_chestTimerInterval) clearInterval(_chestTimerInterval);
+  _chestTimerInterval=setInterval(()=>{
+    renderChests();
+    _updateChestBadge();
+  },1000);
+}
+function closePanelChests(){
+  document.getElementById('panel-chests').style.display='none';
+  if(_chestTimerInterval){clearInterval(_chestTimerInterval);_chestTimerInterval=null;}
+  showHamburgerIfMenu();
+}
+let _chestTimerInterval=null;
+
+function renderChests(){
+  const slots=_getChestSave();
+  const list=document.getElementById('chests-list');
+  if(!list) return;
+  let html='';
+  const now=Date.now();
+
+  for(let i=0;i<MAX_CHEST_SLOTS;i++){
+    const ch=slots[i];
+    if(!ch){
+      html+=`<div class="chest-slot-empty">📭 Slot ${i+1} vide<br><span style="font-size:11px">Les coffres s'obtiennent en jouant des parties</span></div>`;
+      continue;
+    }
+    const elapsed=now-ch.startedAt;
+    const done=elapsed>=ch.timerMs;
+    const pct=done?100:Math.min(100,Math.round(elapsed/ch.timerMs*100));
+    let timeStr='';
+    if(!done){
+      const rem=Math.max(0,ch.timerMs-elapsed);
+      const h=Math.floor(rem/3600000); const m=Math.floor((rem%3600000)/60000); const s=Math.floor((rem%60000)/1000);
+      timeStr=h>0?`${h}h ${String(m).padStart(2,'0')}min`:`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    }
+    html+=`<div class="chest-card${done?' ready-chest':' locked-chest'}">
+      <div class="chest-emoji">${ch.emoji}</div>
+      <div class="chest-name">${ch.name}</div>
+      <div class="chest-desc">${ch.desc}</div>
+      <div class="chest-timer${done?' done-timer':''}">${done?'✅ Prêt à ouvrir !':timeStr}</div>
+      <div class="chest-timer-bar-bg"><div class="chest-timer-bar-fill" style="width:${pct}%"></div></div>
+      <button class="chest-open-btn ${done?'open-ready':'open-locked'}" ${done?`onclick="openChestSlot(${i})"`:'disabled'}>
+        ${done?'📦 Ouvrir':'🔒 En cours...'}
+      </button>
+    </div>`;
+  }
+  list.innerHTML=html;
+}
+
+function openChestSlot(idx){
+  const slots=_getChestSave();
+  const ch=slots[idx];
+  if(!ch) return;
+  const now=Date.now();
+  if(now-ch.startedAt<ch.timerMs) return;
+  // Grant rewards
+  const c=ch.coins[0]+Math.floor(Math.random()*(ch.coins[1]-ch.coins[0]+1));
+  const p=ch.pearls[0]+Math.floor(Math.random()*(ch.pearls[1]-ch.pearls[0]+1));
+  money+=c; if(p>0) pearls+=p;
+  saveState(); updateUI();
+  // Remove chest
+  slots.splice(idx,1);
+  _setChestSave(slots);
+  // Quest: chest opened
+  const qd=_initDailyQuests();
+  for(const q of qd.quests){ if(q.id==='chest1'&&!q.claimed) q.progress=Math.min(q.target,q.progress+1); }
+  _saveQuestProgress(qd); _updateQuestBadge(qd);
+  // Season XP
+  _addSeasonXP(20);
+  renderChests();
+  _updateChestBadge();
+  // Show reward
+  const msg=`📦 Coffre ouvert !\n+${c} 🪙${p>0?' +'+p+' 🔮':''}`;
+  const fb=document.createElement('div');
+  fb.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:linear-gradient(135deg,#1a1a3a,#252550);border:2px solid rgba(249,199,79,.5);color:#fff;font-family:\'Boogaloo\',cursive;font-size:22px;border-radius:20px;padding:20px 36px;z-index:99999;text-align:center;pointer-events:none;animation:popIn .4s ease forwards;';
+  fb.innerHTML=`📦 Coffre ouvert !<br><span style="color:#f9c74f">+${c} 🪙</span>${p>0?` <span style="color:#c8a9ff">+${p} 🔮</span>`:''}`;
+  document.body.appendChild(fb);
+  setTimeout(()=>fb.remove(),2000);
+}
+
+// Award a chest based on rank after a game
+function _awardChestForRank(rank){
+  const slots=_getChestSave();
+  if(slots.length>=MAX_CHEST_SLOTS) return; // full
+  let typeId='wood';
+  if(rank===1) typeId='gold';
+  else if(rank<=3) typeId='wood';
+  else typeId='wood';
+  // For wins award mega occasionally
+  if(rank===1 && Math.random()<0.3) typeId='mega';
+  _addChest(typeId);
+}
+
+// =====================================================================
+// ===== SYSTÈME DE SAISON =============================================
+// =====================================================================
+const SEASON_REWARDS=[
+  {level:1,  emoji:'🪙',  name:'100 Pièces',        pts:0,   reward:{coins:100}},
+  {level:2,  emoji:'📦',  name:'Boîte Mystère',      pts:100, reward:{box:1}},
+  {level:3,  emoji:'🪙',  name:'150 Pièces',         pts:250, reward:{coins:150}},
+  {level:4,  emoji:'🔮',  name:'5 Perles Rares',     pts:450, reward:{pearls:5}},
+  {level:5,  emoji:'📦',  name:'Pack 3 Boîtes',      pts:700, reward:{box:3}},
+  {level:6,  emoji:'🪙',  name:'200 Pièces',         pts:1000,reward:{coins:200}},
+  {level:7,  emoji:'🔮',  name:'10 Perles Rares',    pts:1350,reward:{pearls:10}},
+  {level:8,  emoji:'📦',  name:'Boîte Garantie',     pts:1750,reward:{guaranteed:1}},
+  {level:9,  emoji:'🪙',  name:'300 Pièces',         pts:2200,reward:{coins:300}},
+  {level:10, emoji:'🌟',  name:'Pack Légendaire',     pts:2700,reward:{coins:500,pearls:20}},
+  {level:11, emoji:'🪙',  name:'250 Pièces',         pts:3300,reward:{coins:250}},
+  {level:12, emoji:'📦',  name:'Pack 3 Boîtes',      pts:3950,reward:{box:3}},
+  {level:13, emoji:'🔮',  name:'15 Perles',          pts:4650,reward:{pearls:15}},
+  {level:14, emoji:'🪙',  name:'400 Pièces',         pts:5400,reward:{coins:400}},
+  {level:15, emoji:'👑',  name:'Récompense Ultime',  pts:6200,reward:{coins:1000,pearls:30}},
+  {level:16, emoji:'🪙',  name:'300 Pièces',         pts:7100,reward:{coins:300}},
+  {level:17, emoji:'📦',  name:'Boîte Garantie',     pts:8100,reward:{guaranteed:1}},
+  {level:18, emoji:'🔮',  name:'20 Perles',          pts:9200,reward:{pearls:20}},
+  {level:19, emoji:'🪙',  name:'500 Pièces',         pts:10400,reward:{coins:500}},
+  {level:20, emoji:'💎',  name:'Méga Récompense',    pts:11700,reward:{coins:2000,pearls:50}},
+  {level:21, emoji:'🪙',  name:'400 Pièces',         pts:13100,reward:{coins:400}},
+  {level:22, emoji:'📦',  name:'Pack 5 Boîtes',      pts:14600,reward:{box:5}},
+  {level:23, emoji:'🔮',  name:'25 Perles',          pts:16200,reward:{pearls:25}},
+  {level:24, emoji:'🪙',  name:'600 Pièces',         pts:17900,reward:{coins:600}},
+  {level:25, emoji:'🏆',  name:'Récompense Max',     pts:19700,reward:{coins:3000,pearls:100}},
+  {level:26, emoji:'🪙',  name:'500 Pièces',         pts:21600,reward:{coins:500}},
+  {level:27, emoji:'📦',  name:'Boîte Garantie',     pts:23600,reward:{guaranteed:1}},
+  {level:28, emoji:'🔮',  name:'30 Perles',          pts:25700,reward:{pearls:30}},
+  {level:29, emoji:'🪙',  name:'800 Pièces',         pts:27900,reward:{coins:800}},
+  {level:30, emoji:'🌈',  name:'Récompense Légendaire',pts:30200,reward:{coins:5000,pearls:200}},
+];
+const SEASON_DURATION_MS=30*24*60*60*1000; // 30 jours
+
+function _getSeasonSave(){
+  try{return JSON.parse(localStorage.getItem('bh_season_v1')||'null');}catch(e){return null;}
+}
+function _setSeasonSave(d){
+  try{localStorage.setItem('bh_season_v1',JSON.stringify(d));}catch(e){}
+}
+function _initSeason(){
+  let s=_getSeasonSave();
+  if(!s){
+    s={startedAt:Date.now(),xp:0,claimed:[]};
+    _setSeasonSave(s);
+  }
+  // Check if season expired
+  if(Date.now()-s.startedAt>SEASON_DURATION_MS){
+    s={startedAt:Date.now(),xp:0,claimed:[]};
+    _setSeasonSave(s);
+  }
+  return s;
+}
+
+function _addSeasonXP(xp){
+  const s=_initSeason();
+  s.xp+=xp;
+  _setSeasonSave(s);
+}
+
+function _getSeasonLevel(xp){
+  let lvl=1;
+  for(const r of SEASON_REWARDS){
+    if(xp>=r.pts) lvl=r.level;
+    else break;
+  }
+  return lvl;
+}
+
+function openSeason(){
+  closeAllPanels();
+  closeHamburgerMenu();
+  document.getElementById('hamburger-btn').style.display='none';
+  document.getElementById('panel-season').style.display='block';
+  renderSeason();
+}
+function closePanelSeason(){
+  document.getElementById('panel-season').style.display='none';
+  showHamburgerIfMenu();
+}
+
+function renderSeason(){
+  const s=_initSeason();
+  const lvl=_getSeasonLevel(s.xp);
+  const curR=SEASON_REWARDS.find(r=>r.level===lvl)||SEASON_REWARDS[0];
+  const nextR=SEASON_REWARDS.find(r=>r.level===lvl+1);
+  const curXP=s.xp;
+  const curMin=curR.pts;
+  const nextMin=nextR?nextR.pts:curR.pts+100;
+  const pct=nextR?Math.round(Math.min(100,(curXP-curMin)/(nextMin-curMin)*100)):100;
+
+  // Days left
+  const remaining=Math.max(0,SEASON_DURATION_MS-(Date.now()-s.startedAt));
+  const daysLeft=Math.ceil(remaining/(24*60*60*1000));
+
+  document.getElementById('season-level').textContent=lvl;
+  document.getElementById('season-days-left').textContent=daysLeft+' jour'+(daysLeft>1?'s':'');
+  document.getElementById('season-xp-cur').textContent=curXP;
+  document.getElementById('season-xp-next').textContent=nextMin;
+  document.getElementById('season-lvl-lo').textContent=lvl;
+  document.getElementById('season-lvl-hi').textContent=lvl+1;
+  document.getElementById('season-xp-bar-fill').style.width=pct+'%';
+
+  const track=document.getElementById('season-track');
+  track.innerHTML='<div class="season-track">'+SEASON_REWARDS.map(r=>{
+    const unlocked=s.xp>=r.pts;
+    const isCurrent=r.level===lvl+1;
+    const claimed=s.claimed.includes(r.level);
+    const canClaim=unlocked && !claimed;
+    let statusIcon=claimed?'✅':unlocked?'🎁':'🔒';
+    let actionBtn='';
+    if(canClaim){
+      actionBtn=`<button onclick="claimSeasonReward(${r.level})" style="border:none;background:linear-gradient(135deg,#f9c74f,#f3722c);color:#1a1a2e;font-family:'Boogaloo',cursive;font-size:14px;border-radius:10px;padding:6px 14px;cursor:pointer;white-space:nowrap;margin-left:8px;">Réclamer</button>`;
+    }
+    return `<div class="season-node${unlocked?' unlocked':''}${isCurrent?' current-node':''}">
+      <div class="sn-level">Niv.${r.level}</div>
+      <div class="sn-reward">${r.emoji}</div>
+      <div class="sn-info">
+        <div class="sn-name">${r.name}</div>
+        <div class="sn-pts">${r.pts} pts</div>
+      </div>
+      <div class="sn-status">${statusIcon}</div>
+      ${actionBtn}
+    </div>`;
+  }).join('')+'</div>';
+}
+
+function claimSeasonReward(level){
+  const s=_initSeason();
+  if(s.claimed.includes(level)) return;
+  if(_getSeasonLevel(s.xp)<level&&s.xp<(SEASON_REWARDS.find(r=>r.level===level)?.pts||0)) return;
+  const r=SEASON_REWARDS.find(r=>r.level===level);
+  if(!r) return;
+  s.claimed.push(level);
+  _setSeasonSave(s);
+  // Grant
+  if(r.reward.coins){ money+=r.reward.coins; }
+  if(r.reward.pearls){ pearls+=r.reward.pearls; }
+  if(r.reward.box){ for(let i=0;i<r.reward.box;i++) _addChest('wood'); }
+  if(r.reward.guaranteed){ _addChest('gold'); }
+  saveState(); updateUI();
+  renderSeason();
+  const fb=document.createElement('div');
+  fb.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:linear-gradient(135deg,#1a1a3a,#252550);border:2px solid rgba(249,199,79,.5);color:#fff;font-family:\'Boogaloo\',cursive;font-size:20px;border-radius:20px;padding:18px 32px;z-index:99999;text-align:center;pointer-events:none;animation:popIn .4s ease forwards;';
+  fb.innerHTML=`${r.emoji} ${r.name} débloqué !`;
+  document.body.appendChild(fb);
+  setTimeout(()=>fb.remove(),2000);
+}
+
+// =====================================================================
+// Hook post-game pour quêtes + coffres + saison
+// =====================================================================
+(function patchShowEndScreen(){
+  const orig=window.showEndScreen;
+  window.showEndScreen=function(rank){
+    orig(rank);
+    // Quest & season XP
+    const kills2=typeof kills!=='undefined'?kills:0;
+    const gems2=typeof sessionGems!=='undefined'?sessionGems:0;
+    const coins2=typeof sessionCoins!=='undefined'?sessionCoins:0;
+    const time2=typeof gameTime!=='undefined'?gameTime:0;
+    const won=rank===1;
+    updateQuestProgress({kills:kills2,won,rank,gems:gems2,coins:coins2,surviveTime:time2});
+    // Season XP: 10 base + 5 per kill + 20 if win
+    const sxp=10+kills2*5+(won?20:0)+(rank<=3?10:0);
+    _addSeasonXP(sxp);
+    // Chest
+    _awardChestForRank(rank);
+    _updateChestBadge();
+  };
+})();
+
+// Init badges on load
+window.addEventListener('load',()=>{
+  const qd=_initDailyQuests();
+  _updateQuestBadge(qd);
+  _updateChestBadge();
+  _initSeason();
 });
+
+// closeAllPanels patch to also close new panels
+const _origCloseAllPanels=window.closeAllPanels;
+window.closeAllPanels=function(){
+  _origCloseAllPanels&&_origCloseAllPanels();
+  const pq=document.getElementById('panel-quests'); if(pq) pq.style.display='none';
+  const pc=document.getElementById('panel-chests'); if(pc) pc.style.display='none';
+  const ps=document.getElementById('panel-season'); if(ps) ps.style.display='none';
+  if(typeof _chestTimerInterval!=='undefined'&&_chestTimerInterval){clearInterval(_chestTimerInterval);_chestTimerInterval=null;}
+  if(typeof _questCdInterval!=='undefined'&&_questCdInterval){clearInterval(_questCdInterval);_questCdInterval=null;}
+};
 window.addEventListener("load", ()=>{
   const menu = document.getElementById("menu");
   if(menu) _menuObserver.observe(menu, {attributes:true, attributeFilter:["style"]});
