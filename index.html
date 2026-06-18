@@ -7645,21 +7645,27 @@ function mpJoinOrCreateRoom(myInfo, status, countEl, pingEl){
     mpPlayersRef = mpRoomRef.child("players");
 
     const myRef = mpPlayersRef.child(pid);
-    myRef.set({
-      name: myInfo.name, tag: myInfo.tag, emoji: myInfo.emoji,
-      trophies: myInfo.trophies, heroIndex: myInfo.heroIndex,
-      joinedAt: Date.now(),
-      state: {x: 0, y: 0, hp: 100, maxHp: 100, dead: false}
+    // Lire les slots déjà pris pour s'assigner le prochain libre (déterministe pour tous)
+    mpPlayersRef.once("value").then(existSnap=>{
+      if(mmCancelled) return;
+      const existVal = existSnap.val() || {};
+      const takenSlots = Object.values(existVal).map(p=>p.slot).filter(s=>typeof s==='number');
+      let myAssignedSlot = 0;
+      for(let s=0;s<11;s++){ if(!takenSlots.includes(s)){ myAssignedSlot=s; break; } }
+      playerSlot = myAssignedSlot;
+      myRef.set({
+        name: myInfo.name, tag: myInfo.tag, emoji: myInfo.emoji,
+        trophies: myInfo.trophies, heroIndex: myInfo.heroIndex,
+        joinedAt: Date.now(),
+        slot: myAssignedSlot,
+        state: {x: 0, y: 0, hp: 100, maxHp: 100, dead: false}
+      });
+      myRef.onDisconnect().remove();
+      status.textContent = "Recherche de joueurs…";
+      mpListenLobby(status, countEl);
+      // After MP_WAIT_MS, finalize with bots if needed
+      mmInterval = setTimeout(()=>{ if(!mmCancelled) mpFinalizeMatch(status, countEl); }, MP_WAIT_MS);
     });
-    myRef.onDisconnect().remove();
-
-    status.textContent = "Recherche de joueurs…";
-    mpListenLobby(status, countEl);
-
-    // After MP_WAIT_MS, finalize with bots if needed
-    mmInterval = setTimeout(()=>{
-      if(!mmCancelled) mpFinalizeMatch(status, countEl);
-    }, MP_WAIT_MS);
   })
   .catch(err=>{
     console.warn("Firebase matchmaking error", err);
@@ -7675,18 +7681,19 @@ function mpListenLobby(status, countEl){
     if(mmCancelled || mpFinalized) return;
     const val = snap.val() || {};
     const pids = Object.keys(val).filter(k=>k!==mpGetPid());
-    // Assign remote real players to slots 1..10 in join order
+    // Assign remote real players using their Firebase-stored slot (authoritative for all clients)
     const sorted = pids.map(k=>({pid:k, ...val[k]})).sort((a,b)=>(a.joinedAt||0)-(b.joinedAt||0));
-    let slot = 1;
     for(const p of sorted){
-      if(slot>10) break;
+      // Use the slot stored in Firebase; fallback to join-order if missing (older client)
+      const slot = (typeof p.slot==='number' && p.slot>=1 && p.slot<=10) ? p.slot
+                   : (sorted.indexOf(p)+1);
+      if(slot>10) continue;
       if(!fakePlayers[slot] || fakePlayers[slot]._pid!==p.pid){
         const info = {name:p.name||"Joueur", tag:p.tag||"#"+p.pid.slice(1,5).toUpperCase(),
           emoji:p.emoji||"😀", trophies:p.trophies||0, isPlayer:false, isReal:true,
-          heroIndex:p.heroIndex, _pid:p.pid};
+          heroIndex:p.heroIndex, _pid:p.pid, _slot:slot};
         addPlayerToSlot(slot, info);
       }
-      slot++;
     }
     const joined = 1 + sorted.length;
     updateMmBar(Math.min(joined,11), 11);
@@ -7706,19 +7713,37 @@ function mpFinalizeMatch(status, countEl){
   clearTimeout(mmInterval);
   if(mpPlayersRef) mpPlayersRef.off("value"); // stop lobby listener, mpStartGameSync attaches its own
   const realCount = fakePlayers.filter(p=>p && p.isReal).length;
-  // Partager la seed de spawn avec tous les joueurs de la room
-  const _spawnSeed = Date.now()%86400000;
-  window._sharedSpawnSeed = _spawnSeed;
-  if(mpRoomRef){
+  // Seed de spawn : le slot 0 (host) la génère et l'écrit dans Firebase.
+  // Les autres la lisent depuis Firebase pour garantir cohérence sur tous les clients.
+  if(playerSlot===0 && mpRoomRef){
+    const _spawnSeed = Date.now()%86400000;
+    window._sharedSpawnSeed = _spawnSeed;
     mpRoomRef.child("status").set("started");
     mpRoomRef.child("spawnSeed").set(_spawnSeed);
+    status.textContent = "✅ Partie trouvée !";
+    countEl.textContent = "11 / 11";
+    mpFillRemainingWithBots(1 + realCount);
+    setTimeout(()=>{ if(!mmCancelled) launchFromMatchmaking(); }, 900);
+  } else if(mpRoomRef){
+    // Non-host : lire la seed depuis Firebase (attendre qu'elle soit écrite)
+    mpRoomRef.child("spawnSeed").on("value", seedSnap=>{
+      const seed = seedSnap.val();
+      if(typeof seed!=='number') return; // pas encore écrite
+      mpRoomRef.child("spawnSeed").off("value");
+      window._sharedSpawnSeed = seed;
+      status.textContent = "✅ Partie trouvée !";
+      countEl.textContent = "11 / 11";
+      mpFillRemainingWithBots(1 + realCount);
+      setTimeout(()=>{ if(!mmCancelled) launchFromMatchmaking(); }, 900);
+    });
+  } else {
+    // Offline fallback
+    window._sharedSpawnSeed = Date.now()%86400000;
+    status.textContent = "✅ Partie trouvée !";
+    countEl.textContent = "11 / 11";
+    mpFillRemainingWithBots(1 + realCount);
+    setTimeout(()=>{ if(!mmCancelled) launchFromMatchmaking(); }, 900);
   }
-  status.textContent = "✅ Partie trouvée !";
-  countEl.textContent = "11 / 11";
-  mpFillRemainingWithBots(1 + realCount);
-  setTimeout(()=>{
-    if(!mmCancelled) launchFromMatchmaking();
-  }, 900);
 }
 
 function mpFillRemainingWithBots(joinedCount){
@@ -7787,9 +7812,10 @@ function mpSpawnRemoteEnemies(level){
     const t = {...base};
     t.hp=t.hpBase+level*6; t.maxHp=t.hp;
     t.shootTimer=99999; t._lastHurt=0; t.gems=0;
-    // Utilise le spawn point assigné au slot de ce joueur réel
+    // Utilise le spawn point du slot Firebase autoritaire de ce joueur réel
     const sp=window._allSpawnPoints;
-    const remoteSlotIdx = realPlayers.indexOf(p)+1; // +1 car slot 0 = local player
+    // _slot est le slot Firebase stocké lors du join (garanti unique et cohérent sur tous les clients)
+    const remoteSlotIdx = (typeof p._slot==='number') ? p._slot : (realPlayers.indexOf(p)+1);
     let x,y;
     if(sp && sp[remoteSlotIdx%sp.length]){
       x=sp[remoteSlotIdx%sp.length].x; y=sp[remoteSlotIdx%sp.length].y;
