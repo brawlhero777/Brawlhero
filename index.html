@@ -789,6 +789,39 @@ canvas{display:block;touch-action:none;}
 @keyframes seasonShine{0%,100%{box-shadow:0 0 10px rgba(249,199,79,.2)}50%{box-shadow:0 0 24px rgba(249,199,79,.5),0 0 40px rgba(243,114,44,.2)}}
 .season-node.unlocked{animation:seasonShine 2s ease-in-out infinite;}
 
+/* ===== BORDURES D'AVATAR ===== */
+.avatar-border-wrap{
+  position:relative;display:inline-flex;align-items:center;justify-content:center;
+  border-radius:50%;
+}
+.avatar-border-ring{
+  position:absolute;inset:-4px;border-radius:50%;pointer-events:none;
+  animation:borderSpin 3s linear infinite;
+}
+@keyframes borderSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes borderPulse{0%,100%{opacity:.7;transform:scale(1)}50%{opacity:1;transform:scale(1.05)}}
+@keyframes borderRainbow{0%{filter:hue-rotate(0deg)}100%{filter:hue-rotate(360deg)}}
+
+.border-card{
+  background:linear-gradient(145deg,#1f1f3a,#2a2a4a);
+  border:2px solid rgba(255,255,255,.1);padding:12px;border-radius:16px;
+  text-align:center;cursor:pointer;transition:.15s;position:relative;overflow:hidden;
+}
+.border-card:hover{transform:translateY(-3px);}
+.border-card.equipped{border-color:#f9c74f;box-shadow:0 0 16px rgba(249,199,79,.3);}
+.border-card.locked{opacity:.45;}
+.border-card .bc-preview{font-size:44px;display:flex;align-items:center;justify-content:center;width:60px;height:60px;margin:0 auto 8px;}
+.border-card .bc-name{font-family:'Boogaloo',cursive;font-size:13px;margin-bottom:3px;}
+.border-card .bc-rarity{font-size:10px;font-family:'Boogaloo',cursive;padding:2px 8px;border-radius:10px;letter-spacing:.5px;text-transform:uppercase;display:inline-block;}
+
+/* Bordure active dans le menu (autour du hero-preview) */
+#hero-border-ring{
+  position:absolute;pointer-events:none;border-radius:50%;
+  width:min(32vw,160px);height:min(32vw,160px);
+  top:50%;left:50%;transform:translate(-50%,-52%);
+  z-index:0;
+}
+
 /* ===== INDICATOR VIBRATION (dans les settings) ===== */
 #vibration-test-btn{
   padding:9px 18px;border:none;border-radius:12px;
@@ -1128,13 +1161,6 @@ canvas{display:block;touch-action:none;}
         </button>
       </div>
 
-      <div style="color:#606080;font-size:13px;">— ou —</div>
-
-      <button onclick="createAccountGuest()"
-        style="width:100%;padding:13px;border:none;border-radius:14px;background:rgba(255,255,255,.08);color:#a0a0c0;font-family:'Boogaloo',cursive;font-size:17px;cursor:pointer;border:1px solid rgba(255,255,255,.12);transition:.15s;">
-        👻 Continuer sans compte (progression locale uniquement)
-      </button>
-
       <button onclick="backToStep1()"
         style="background:none;border:none;color:#606080;font-size:13px;cursor:pointer;margin-top:4px;">
         ← Retour
@@ -1194,7 +1220,10 @@ canvas{display:block;touch-action:none;}
 
   <!-- HERO STAGE -->
   <div id="menu-stage">
-    <div id="hero-preview">😀</div>
+    <div style="position:relative;display:inline-flex;align-items:center;justify-content:center;">
+      <div id="hero-border-ring"></div>
+      <div id="hero-preview">😀</div>
+    </div>
     <div id="hero-name-preview">Aventurier</div>
   </div>
 
@@ -1305,14 +1334,8 @@ canvas{display:block;touch-action:none;}
       <div style="font-size:11px;color:#505070;text-align:center;line-height:1.6;">Se déconnecter effacera la progression locale.<br>Ton compte en ligne restera sauvegardé.</div>
     </div>
 
-    <!-- Pas de compte / invité -->
+    <!-- Pas de compte — obliger la création -->
     <div id="acc-panel-guest" style="display:none;flex-direction:column;gap:14px;">
-      <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:16px 18px;text-align:center;">
-        <div style="font-size:40px;margin-bottom:8px;">👻</div>
-        <div style="font-family:'Boogaloo',cursive;font-size:18px;color:#a0a0c0;">Mode invité</div>
-        <div style="font-size:12px;color:#606080;margin-top:4px;">Ta progression n'est sauvegardée que sur cet appareil.</div>
-      </div>
-
       <!-- Créer nouveau compte -->
       <div style="background:rgba(76,201,240,.06);border:1px solid rgba(76,201,240,.2);border-radius:18px;padding:16px 18px;">
         <div style="font-family:'Boogaloo',cursive;font-size:16px;color:#4cc9f0;margin-bottom:10px;">📧 Créer un compte</div>
@@ -1444,7 +1467,8 @@ canvas{display:block;touch-action:none;}
 <div id="collection">
   <h2>🎒 COLLECTION</h2>
   <div id="coll-tabs">
-    <button class="coll-tab active" onclick="switchCollTab('grid')">📋 Tous les personnages</button>
+    <button class="coll-tab active" onclick="switchCollTab('grid')">📋 Héros</button>
+    <button class="coll-tab" onclick="switchCollTab('borders')">🔲 Bordures</button>
     <button class="coll-tab" onclick="switchCollTab('detail')">🔍 Détails</button>
   </div>
 
@@ -1463,10 +1487,19 @@ canvas{display:block;touch-action:none;}
     <div id="grid"></div>
   </div>
 
+  <!-- TAB BORDURES -->
+  <div id="coll-tab-borders" style="display:none;">
+    <div style="text-align:center;margin-bottom:16px;">
+      <div style="font-family:'Boogaloo',cursive;font-size:16px;color:#a0a0c0;margin-bottom:8px;">Bordures débloquables via les boîtes cosmétiques</div>
+      <div style="font-size:12px;color:#606080;">Plus la rareté est élevée, moins la bordure est fréquente.</div>
+    </div>
+    <div id="borders-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;"></div>
+  </div>
+
   <!-- TAB 2 : détail d'un héros -->
   <div id="coll-tab-detail" style="display:none;">
     <p id="detail-hint" style="text-align:center;color:#a0a0c0;margin:30px 0;">
-      ← Clique sur un personnage dans l'onglet Tous pour voir ses détails
+      ← Clique sur un personnage dans l'onglet Héros pour voir ses détails
     </p>
     <div id="detail-panel" style="display:none;"></div>
   </div>
@@ -1550,8 +1583,6 @@ canvas{display:block;touch-action:none;}
       </div>
     </div>
   </div>
-
-  <!-- TAB PIÈCES -->
   <div id="shop-tab-coins" style="display:none;">
     <div class="coin-grid">
       <div class="coin-item">
@@ -1667,6 +1698,229 @@ canvas{display:block;touch-action:none;}
 // shot: shape of bullet drawn for this hero
 // hp: base HP at level 1 | dmg: base damage at level 1 | spd: movement speed
 // RARITIES: nul(1) | rare(5) | superrare(5) | epic(5) | mythic(3) | legendary(1) | mystery(1)
+// =====================================================================
+// ===== SYSTÈME DE BORDURES D'AVATAR =====================================
+// =====================================================================
+
+const AVATAR_BORDERS = [
+  // Rareté : commune (drop ~40%) — couleurs simples
+  {id:'border_silver',   name:'Argent',        rarity:'rare',       color:'#adb5bd', gradient:'linear-gradient(135deg,#adb5bd,#6c757d)',                   style:'solid',      dropWeight:400},
+  {id:'border_gold',     name:'Or',             rarity:'rare',       color:'#f9c74f', gradient:'linear-gradient(135deg,#f9c74f,#c8a000)',                   style:'solid',      dropWeight:350},
+  {id:'border_blue',     name:'Bleu Électro',   rarity:'rare',       color:'#4cc9f0', gradient:'linear-gradient(135deg,#4cc9f0,#0077b6)',                   style:'solid',      dropWeight:350},
+  // Super Rare (~25%)
+  {id:'border_fire',     name:'Flamme',         rarity:'superrare',  color:'#f3722c', gradient:'linear-gradient(135deg,#ff6d00,#f9c74f,#f3722c)',           style:'spin',       dropWeight:200},
+  {id:'border_ice',      name:'Cristal Glacé',  rarity:'superrare',  color:'#00b4d8', gradient:'linear-gradient(135deg,#00b4d8,#90e0ef,#0077b6)',           style:'spin',       dropWeight:180},
+  {id:'border_nature',   name:'Nature',         rarity:'superrare',  color:'#2dc653', gradient:'linear-gradient(135deg,#2dc653,#a8ff3e,#1b4332)',           style:'spin',       dropWeight:170},
+  // Épique (~18%)
+  {id:'border_galaxy',   name:'Galaxie',        rarity:'epic',       color:'#c77dff', gradient:'linear-gradient(135deg,#c77dff,#9b5de5,#4361ee)',           style:'pulse',      dropWeight:100},
+  {id:'border_toxic',    name:'Toxique',        rarity:'epic',       color:'#80ff00', gradient:'linear-gradient(135deg,#80ff00,#39ff14,#1a4a00)',           style:'pulse',      dropWeight:90},
+  {id:'border_lava',     name:'Lave',           rarity:'epic',       color:'#ff4500', gradient:'linear-gradient(135deg,#ff4500,#ff8800,#4a0000)',           style:'pulse',      dropWeight:85},
+  // Mythique (~10%)
+  {id:'border_void',     name:'Néant',          rarity:'mythic',     color:'#9d00ff', gradient:'linear-gradient(135deg,#000,#9d00ff,#2d00a0,#000)',         style:'pulsespin',  dropWeight:55},
+  {id:'border_storm',    name:'Tempête',        rarity:'mythic',     color:'#ffd166', gradient:'linear-gradient(135deg,#ffd166,#06d6a0,#118ab2)',           style:'pulsespin',  dropWeight:50},
+  // Légendaire (~5%)
+  {id:'border_divine',   name:'Divin',          rarity:'legendary',  color:'#f9c74f', gradient:'linear-gradient(135deg,#f9c74f,#fff,#f3722c,#f9c74f)',     style:'pulsespin',  dropWeight:25},
+  {id:'border_cosmic',   name:'Cosmique',       rarity:'legendary',  color:'#fff',    gradient:'linear-gradient(135deg,#fff,#c77dff,#4cc9f0,#f9c74f,#fff)','style':'pulsespin', dropWeight:20},
+  // Mystérieux (~2%)
+  {id:'border_mystery',  name:'Inconnu',        rarity:'mystery',    color:'#ff00ff', gradient:'linear-gradient(135deg,#ff00ff,#00ffff,#ffff00,#ff00ff)',   style:'rainbow',    dropWeight:8},
+];
+
+// Total drop weight = 2083 => proportional percentages
+
+function _getBordersUnlocked(){
+  try{ return JSON.parse(localStorage.getItem('bh_borders_v1')||'[]'); }catch(e){ return []; }
+}
+function _setBordersUnlocked(arr){
+  try{ localStorage.setItem('bh_borders_v1', JSON.stringify(arr)); }catch(e){}
+}
+function _getEquippedBorder(){
+  try{ return localStorage.getItem('bh_border_equipped')||null; }catch(e){ return null; }
+}
+function _setEquippedBorder(id){
+  try{ if(id) localStorage.setItem('bh_border_equipped',id); else localStorage.removeItem('bh_border_equipped'); }catch(e){}
+}
+
+function rollAvatarBorder(){
+  // Weighted random pick from AVATAR_BORDERS
+  const total = AVATAR_BORDERS.reduce((s,b)=>s+b.dropWeight,0);
+  let r = Math.random()*total;
+  for(const b of AVATAR_BORDERS){
+    r -= b.dropWeight;
+    if(r<=0) return b;
+  }
+  return AVATAR_BORDERS[0];
+}
+
+function applyEquippedBorder(){
+  const ring = document.getElementById('hero-border-ring');
+  if(!ring) return;
+  const id = _getEquippedBorder();
+  if(!id){ ring.style.cssText=''; ring.style.display='none'; return; }
+  const border = AVATAR_BORDERS.find(b=>b.id===id);
+  if(!border){ ring.style.cssText=''; ring.style.display='none'; return; }
+
+  const size = 'min(34vw,170px)';
+  const bw = '5px';
+  let animStyle = '';
+  if(border.style==='spin') animStyle='animation:borderSpin 3s linear infinite;';
+  else if(border.style==='pulse') animStyle='animation:borderPulse 1.8s ease-in-out infinite;';
+  else if(border.style==='pulsespin') animStyle='animation:borderSpin 4s linear infinite, borderPulse 2s ease-in-out infinite;';
+  else if(border.style==='rainbow') animStyle='animation:borderSpin 3s linear infinite, borderRainbow 3s linear infinite;';
+
+  ring.style.cssText=`
+    position:absolute;border-radius:50%;pointer-events:none;
+    width:${size};height:${size};
+    top:50%;left:50%;transform:translate(-50%,-52%);
+    z-index:0;
+    background:conic-gradient(from 0deg, ${border.gradient.replace('linear-gradient(135deg,','').replace(')','')}};
+    -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - ${bw}),#fff calc(100% - ${bw} + 1px));
+    mask:radial-gradient(farthest-side,transparent calc(100% - ${bw}),#fff calc(100% - ${bw} + 1px));
+    box-shadow:0 0 16px ${border.color}88;
+    ${animStyle}
+  `.replace(/\s+/g,' ');
+
+  // Simpler approach: just a glowing ring
+  ring.style.cssText = `
+    display:block;position:absolute;border-radius:50%;pointer-events:none;
+    width:min(36vw,180px);height:min(36vw,180px);
+    top:50%;left:50%;transform:translate(-50%,-52%);
+    border:5px solid transparent;
+    background:${border.gradient} border-box;
+    -webkit-mask:linear-gradient(#fff 0 0) padding-box,linear-gradient(#fff 0 0);
+    -webkit-mask-composite:destination-out;mask-composite:exclude;
+    box-shadow:0 0 18px ${border.color}99,inset 0 0 12px ${border.color}44;
+    z-index:0;
+  `;
+  if(border.style==='spin')        ring.style.animation='borderSpin 3s linear infinite';
+  else if(border.style==='pulse')  ring.style.animation='borderPulse 1.8s ease-in-out infinite';
+  else if(border.style==='pulsespin') ring.style.animation='borderSpin 4s linear infinite';
+  else if(border.style==='rainbow')ring.style.animation='borderSpin 3s linear infinite, borderRainbow 3s linear infinite';
+}
+
+function renderBordersTab(){
+  const grid = document.getElementById('borders-grid');
+  if(!grid) return;
+  const unlocked = _getBordersUnlocked();
+  const equipped = _getEquippedBorder();
+
+  grid.innerHTML = AVATAR_BORDERS.map(b=>{
+    const isUnlocked = unlocked.includes(b.id);
+    const isEquipped = equipped === b.id;
+    const rc = RARITY_INFO[b.rarity]?.color || '#fff';
+    const rl = RARITY_INFO[b.rarity]?.label || b.rarity;
+    // Drop rate approx display
+    const totalW = AVATAR_BORDERS.reduce((s,x)=>s+x.dropWeight,0);
+    const pct = (b.dropWeight/totalW*100).toFixed(1);
+
+    // Preview ring swatch
+    const previewStyle = `width:52px;height:52px;border-radius:50%;border:5px solid transparent;background:${b.gradient} border-box;-webkit-mask:linear-gradient(#fff 0 0) padding-box,linear-gradient(#fff 0 0);-webkit-mask-composite:destination-out;mask-composite:exclude;box-shadow:0 0 12px ${b.color}88;display:inline-block;`;
+
+    const actionBtn = isUnlocked
+      ? (isEquipped
+        ? `<button onclick="unequipBorder()" style="border:none;background:rgba(255,80,80,.2);color:#ff8888;border:1px solid #ff555555;font-family:'Boogaloo',cursive;font-size:11px;border-radius:8px;padding:4px 10px;cursor:pointer;margin-top:5px;">Retirer</button>`
+        : `<button onclick="equipBorder('${b.id}')" style="border:none;background:rgba(168,255,62,.15);color:#a8ff3e;border:1px solid rgba(168,255,62,.3);font-family:'Boogaloo',cursive;font-size:11px;border-radius:8px;padding:4px 10px;cursor:pointer;margin-top:5px;">Équiper</button>`)
+      : `<div style="font-size:10px;color:#606080;margin-top:5px;">🔒 ${pct}% de chance</div>`;
+
+    return `<div class="border-card${isEquipped?' equipped':''}${isUnlocked?'':' locked'}" style="border-color:${isEquipped?rc:isUnlocked?rc+'55':'rgba(255,255,255,.1)'}">
+      <div style="font-size:10px;font-family:'Boogaloo',cursive;padding:2px 8px;border-radius:10px;letter-spacing:.5px;text-transform:uppercase;display:inline-block;background:${rc}22;color:${rc};border:1px solid ${rc}55;margin-bottom:6px;">${rl}</div>
+      <div class="bc-preview"><span style="${previewStyle}"></span></div>
+      <div class="bc-name" style="color:${rc}">${b.name}</div>
+      ${isEquipped?'<div style="font-size:10px;color:#f9c74f;margin-top:2px;">✅ Équipée</div>':''}
+      ${actionBtn}
+    </div>`;
+  }).join('');
+}
+
+function equipBorder(id){
+  const unlocked = _getBordersUnlocked();
+  if(!unlocked.includes(id)) return;
+  _setEquippedBorder(id);
+  applyEquippedBorder();
+  renderBordersTab();
+  _showBorderToast('✅ Bordure équipée !');
+}
+function unequipBorder(){
+  _setEquippedBorder(null);
+  applyEquippedBorder();
+  renderBordersTab();
+  _showBorderToast('Bordure retirée');
+}
+function _showBorderToast(msg){
+  const fb=document.createElement('div');
+  fb.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:linear-gradient(135deg,#1a1a3a,#252550);border:2px solid rgba(249,199,79,.4);color:#fff;font-family:\'Boogaloo\',cursive;font-size:18px;border-radius:18px;padding:14px 28px;z-index:99999;text-align:center;pointer-events:none;animation:popIn .4s ease forwards;';
+  fb.textContent=msg;
+  document.body.appendChild(fb);
+  setTimeout(()=>fb.remove(),1600);
+}
+
+// =====================================================================
+// ===== COSMO BOX (boîte cosmétique — pass uniquement) ================
+// =====================================================================
+
+function openCosmoBox(){
+  const border = rollAvatarBorder();
+  const unlocked = _getBordersUnlocked();
+  const isNew = !unlocked.includes(border.id);
+  if(isNew){ unlocked.push(border.id); _setBordersUnlocked(unlocked); }
+
+  const rc = RARITY_INFO[border.rarity]?.color || '#fff';
+  const rl = RARITY_INFO[border.rarity]?.label || border.rarity;
+  const totalW = AVATAR_BORDERS.reduce((s,b)=>s+b.dropWeight,0);
+  const pct = (border.dropWeight/totalW*100).toFixed(1);
+
+  // Show special reveal overlay (reusing boxOverlay)
+  const ov = document.getElementById('boxOverlay');
+  const phaseOpen = document.getElementById('box-phase-open');
+  const phaseRarity = document.getElementById('box-phase-rarity');
+  const phaseHero = document.getElementById('box-phase-hero');
+  const icon = document.getElementById('box-icon');
+  const lt = document.getElementById('loot');
+  const plt = document.getElementById('pearl-loot');
+  const hint = document.getElementById('box-tap-hint');
+
+  phaseOpen.style.display='flex'; phaseRarity.style.display='none'; phaseHero.style.display='none';
+  lt.innerHTML=''; lt.className=''; plt.innerHTML=''; plt.style.display='none';
+  hint.style.opacity='0';
+  icon.textContent='🎁'; icon.style.animation='none';
+  ov.className='reveal-'+border.rarity;
+  ov.style.display='flex';
+
+  void icon.offsetWidth;
+  icon.style.animation='boxShake 0.55s ease-in-out';
+
+  setTimeout(()=>{
+    icon.style.animation='spin 0.6s ease-out forwards';
+    setTimeout(()=>{
+      icon.textContent='🔲';
+      icon.style.animation='popIn 0.4s cubic-bezier(.175,.885,.32,1.275) forwards';
+
+      const previewStyle = `width:64px;height:64px;border-radius:50%;border:7px solid transparent;background:${border.gradient} border-box;-webkit-mask:linear-gradient(#fff 0 0) padding-box,linear-gradient(#fff 0 0);-webkit-mask-composite:destination-out;mask-composite:exclude;box-shadow:0 0 20px ${rc}99;display:inline-block;vertical-align:middle;`;
+
+      lt.innerHTML=`
+        <div style="display:flex;flex-direction:column;align-items:center;gap:10px;">
+          <span style="${previewStyle}"></span>
+          <div style="font-family:'Boogaloo',cursive;font-size:26px;color:${rc};text-shadow:0 0 16px ${rc};">${border.name}</div>
+          <div style="font-family:'Boogaloo',cursive;font-size:14px;padding:3px 14px;border-radius:12px;background:${rc}22;color:${rc};border:1px solid ${rc}66;">${rl.toUpperCase()}</div>
+          <div style="font-size:12px;color:#a0a0c0;">${isNew?'✨ Nouvelle bordure !':'📦 Déjà obtenue'} · taux ${pct}%</div>
+        </div>`;
+      void lt.offsetWidth;
+      lt.className='loot-appear';
+
+      boxPhase=3; boxReady=true; boxCb=null;
+      setTimeout(()=>{
+        hint.textContent='Appuyez pour continuer...';
+        hint.style.opacity='1';
+      },400);
+
+      // auto-equip if new
+      if(isNew && !_getEquippedBorder()){
+        _setEquippedBorder(border.id);
+        applyEquippedBorder();
+      }
+    },620);
+  },580);
+}
+
 const RARITY_INFO={
   nul:      {label:"Nul",         color:"#7a7a8a", order:0},
   rare:     {label:"Rare",        color:"#4cc9f0", order:1},
@@ -1741,10 +1995,12 @@ let collActiveTab="grid";
 function switchCollTab(tab){
   collActiveTab=tab;
   document.querySelectorAll(".coll-tab").forEach((t,i)=>{
-    t.classList.toggle("active",["grid","detail"][i]===tab);
+    t.classList.toggle("active",["grid","borders","detail"][i]===tab);
   });
   document.getElementById("coll-tab-grid").style.display=tab==="grid"?"block":"none";
+  document.getElementById("coll-tab-borders").style.display=tab==="borders"?"block":"none";
   document.getElementById("coll-tab-detail").style.display=tab==="detail"?"block":"none";
+  if(tab==="borders") renderBordersTab();
 }
 
 let rarityFilter="all";
@@ -6918,6 +7174,8 @@ function closeMapPicker(){
 }
 
 // Expose functions used in HTML onclick attributes
+window.equipBorder=equipBorder;
+window.unequipBorder=unequipBorder;
 window.startGame=startGame;
 window.showEndScreen=showEndScreen;
 window.openMapPicker=openMapPicker;
@@ -7578,7 +7836,12 @@ function showStep1(){
 function buildAvatarGrid(){
   const grid=document.getElementById("acc-avatar-grid");
   grid.innerHTML="";
-  AVATARS.forEach(em=>{
+  // Only show unlocked heroes as avatars
+  const unlockedEmojis = heroes.filter((_,i) => hData[i] && hData[i].unlocked).map(h => h.emoji);
+  if(unlockedEmojis.length===0) unlockedEmojis.push(heroes[0].emoji);
+  // If current selectedAvatar is not in unlocked list, reset to first unlocked
+  if(!unlockedEmojis.includes(selectedAvatar)) selectedAvatar = unlockedEmojis[0];
+  unlockedEmojis.forEach(em=>{
     const btn=document.createElement("button");
     btn.textContent=em;
     btn.style.cssText=`font-size:28px;width:48px;height:48px;border-radius:12px;border:2px solid ${em===selectedAvatar?"#f9c74f":"rgba(255,255,255,.12)"};background:${em===selectedAvatar?"rgba(249,199,79,.15)":"rgba(255,255,255,.05)"};cursor:pointer;transition:.15s;`;
@@ -7648,11 +7911,9 @@ async function createAccountWithEmail(){
 }
 
 function createAccountGuest(){
-  const username=document.getElementById("acc-username").value.trim()||"Invité";
-  const acc={ username, email:null, avatar:selectedAvatar, createdAt:Date.now(), gameState:null };
-  sessionStorage.setItem(ACCOUNT_KEY, JSON.stringify(acc));
-  applyAccountToGame(acc);
-  closeAccountScreen();
+  // Mode sans compte supprimé — forcer la création de compte
+  const emailInput = document.getElementById("acc-email");
+  if(emailInput) emailInput.focus();
 }
 
 async function continueWithSavedAccount(){
@@ -8999,7 +9260,7 @@ function openProfilePanel(){
   document.getElementById("prof-avatar-display").textContent = avatar;
   document.getElementById("prof-name-display").textContent = name;
   document.getElementById("prof-name-display").style.color = nameColor;
-  document.getElementById("prof-email-display").textContent = email ? ("📧 " + email) : "Mode invité";
+  document.getElementById("prof-email-display").textContent = email ? ("📧 " + email) : "";
   document.getElementById("prof-username-input").value = name;
 
   // Reset confirm field
@@ -9035,10 +9296,12 @@ function openProfilePanel(){
     colorGrid.appendChild(btn);
   });
 
-  // Build icon grid
+  // Build icon grid — only unlocked heroes
   const iconGrid = document.getElementById("prof-icon-grid");
   iconGrid.innerHTML = "";
-  PROFILE_ICONS.forEach(ic => {
+  const unlockedIcons = heroes.filter((_,i) => hData[i] && hData[i].unlocked).map(h => h.emoji);
+  if(unlockedIcons.length===0) unlockedIcons.push(heroes[0].emoji);
+  unlockedIcons.forEach(ic => {
     const btn = document.createElement("button");
     const isActive = (pd.icon || (acc&&acc.avatar) || "😀") === ic;
     btn.textContent = ic;
@@ -9465,12 +9728,12 @@ const SEASON_REWARDS=[
   {level:5,  emoji:'📦',  name:'Pack 3 Boîtes',      pts:700, reward:{box:3}},
   {level:6,  emoji:'🪙',  name:'200 Pièces',         pts:1000,reward:{coins:200}},
   {level:7,  emoji:'🔮',  name:'10 Perles Rares',    pts:1350,reward:{pearls:10}},
-  {level:8,  emoji:'📦',  name:'Boîte Garantie',     pts:1750,reward:{guaranteed:1}},
+  {level:8,  emoji:'🎁',  name:'Boîte Cosmétique',   pts:1750,reward:{cosmobox:1}},
   {level:9,  emoji:'🪙',  name:'300 Pièces',         pts:2200,reward:{coins:300}},
   {level:10, emoji:'🌟',  name:'Pack Légendaire',     pts:2700,reward:{coins:500,pearls:20}},
   {level:11, emoji:'🪙',  name:'250 Pièces',         pts:3300,reward:{coins:250}},
   {level:12, emoji:'📦',  name:'Pack 3 Boîtes',      pts:3950,reward:{box:3}},
-  {level:13, emoji:'🔮',  name:'15 Perles',          pts:4650,reward:{pearls:15}},
+  {level:13, emoji:'🎁',  name:'Boîte Cosmétique',   pts:4650,reward:{cosmobox:1}},
   {level:14, emoji:'🪙',  name:'400 Pièces',         pts:5400,reward:{coins:400}},
   {level:15, emoji:'👑',  name:'Récompense Ultime',  pts:6200,reward:{coins:1000,pearls:30}},
   {level:16, emoji:'🪙',  name:'300 Pièces',         pts:7100,reward:{coins:300}},
@@ -9597,6 +9860,7 @@ function claimSeasonReward(level){
   if(r.reward.pearls){ pearls+=r.reward.pearls; }
   if(r.reward.box){ money+=r.reward.box*50; } // Converti en pièces
   if(r.reward.guaranteed){ money+=200; } // Converti en pièces
+  if(r.reward.cosmobox){ openCosmoBox(); } // Ouvre une boîte cosmétique
   saveState(); updateUI();
   renderSeason();
   const fb=document.createElement('div');
@@ -9632,6 +9896,7 @@ window.addEventListener('load',()=>{
   const qd=_initDailyQuests();
   _updateQuestBadge(qd);
   _initSeason();
+  applyEquippedBorder();
 });
 
 // closeAllPanels patch to also close new panels
