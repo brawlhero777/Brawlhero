@@ -47,10 +47,10 @@ body{overflow:hidden;background:#1a1a2e;font-family:'Nunito',sans-serif;user-sel
 
 /* PLAY BUTTON — flottant au-dessus de la barre */
 #menu-play-wrap{display:flex;flex-direction:column;align-items:center;flex-shrink:0;}
-#menu-bottom{position:absolute;bottom:0;left:0;right:0;height:118px;display:flex;align-items:center;justify-content:space-between;padding:0 20px 18px;z-index:2;background:linear-gradient(to top,rgba(5,4,18,.98) 65%,rgba(5,4,18,.7) 85%,transparent);border-top:1px solid rgba(255,255,255,.06);}
+#menu-bottom{position:absolute;bottom:0;left:0;right:0;height:118px;display:flex;align-items:center;justify-content:space-around;padding:0 8px 18px;gap:4px;z-index:2;background:linear-gradient(to top,rgba(5,4,18,.98) 65%,rgba(5,4,18,.7) 85%,transparent);border-top:1px solid rgba(255,255,255,.06);}
 
 /* SIDE BUTTONS */
-.btn-side{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;width:84px;height:84px;border:2.5px solid rgba(255,255,255,.2);border-radius:20px;background:linear-gradient(160deg,rgba(255,255,255,.12),rgba(255,255,255,.04));font-family:'Boogaloo',cursive;font-size:13px;color:#ddd;cursor:pointer;transition:.15s;gap:4px;flex-shrink:0;padding-bottom:10px;box-shadow:0 5px 0 rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.12);}
+.btn-side{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;width:68px;height:78px;border:2.5px solid rgba(255,255,255,.2);border-radius:20px;background:linear-gradient(160deg,rgba(255,255,255,.12),rgba(255,255,255,.04));font-family:'Boogaloo',cursive;font-size:13px;color:#ddd;cursor:pointer;transition:.15s;gap:4px;flex-shrink:0;padding-bottom:10px;box-shadow:0 5px 0 rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.12);}
 .btn-side span.side-icon{font-size:32px;line-height:1;}
 .btn-side:hover{background:linear-gradient(160deg,rgba(255,255,255,.2),rgba(255,255,255,.08));transform:translateY(-4px);box-shadow:0 9px 0 rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.18);}
 .btn-side:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.6);}
@@ -937,8 +937,6 @@ canvas{display:block;touch-action:none;}
   </div>
 </div>
 <div id="hamburger-menu">
-  <div class="hmenu-item" onclick="closeHamburgerMenu();openQuests()">📋 Quêtes <span id="hmenu-quests-badge" style="background:#a8ff3e;color:#1a1a2e;border-radius:10px;font-size:11px;padding:2px 7px;font-family:'Boogaloo',cursive;margin-left:4px;display:none;">NEW</span></div>
-  <div class="hmenu-item" onclick="closeHamburgerMenu();openSeason()">🏅 Saison</div>
   <div class="hmenu-sep"></div>
   <div class="hmenu-item" onclick="closeHamburgerMenu();openSettings()">⚙️ Paramètres</div>
   <div class="hmenu-item" onclick="closeHamburgerMenu();openHistory()">📜 Historique</div>
@@ -1237,7 +1235,7 @@ canvas{display:block;touch-action:none;}
   </div>
 
   <!-- BARRE DE NAVIGATION BAS -->
-  <div id="menu-bottom">
+  <div id="menu-bottom" style="justify-content:space-around;">
 
     <!-- Magasin -->
     <button class="btn-side" onclick="openShop()">
@@ -1245,10 +1243,22 @@ canvas{display:block;touch-action:none;}
       Magasin
     </button>
 
+    <!-- Saison / Pass -->
+    <button class="btn-side" onclick="openSeason()">
+      <span class="side-icon">⚡</span>
+      Pass
+    </button>
+
     <!-- MAP — centre dans la barre -->
     <button id="menu-map-btn" onclick="openMapPicker()">
       <span class="map-icon">🗺️</span>
       <span id="map-name-label">Herbe</span>
+    </button>
+
+    <!-- Quêtes -->
+    <button class="btn-side" style="position:relative;" onclick="openQuests()">
+      <span class="side-icon">📋</span>
+      Quêtes
     </button>
 
     <!-- Collection -->
@@ -2732,30 +2742,38 @@ function renderTrophyRoad(){
 }
 
 // ===================== PEARL SHOP =====================
+const PEARL_PRICES={nul:0,rare:30,superrare:60,epic:100,mythic:150,legendary:250,mystery:300};
+function getHeroPrice(h){return PEARL_PRICES[h.rarity]||50;}
 function renderPearlShop(){
   document.getElementById("shop-pearls").textContent=pearls;
   const grid=document.getElementById("pearl-hero-grid");
   grid.innerHTML="";
   heroes.forEach((h,i)=>{
     const owned=hData[i].unlocked;
+    const price=getHeroPrice(h);
     const card=document.createElement("div");
     card.className="pearl-card"+(owned?" owned":"");
+    const rarityLabels={nul:"Commun",rare:"Rare",superrare:"Super Rare",epic:"Épique",mythic:"Mythique",legendary:"Légendaire",mystery:"Mystérieux"};
+    const rarityColors={nul:"#7a7a8a",rare:"#4cc9f0",superrare:"#2dc653",epic:"#c77dff",mythic:"#ff6d00",legendary:"#f9c74f",mystery:"#cc00ff"};
+    const col=rarityColors[h.rarity]||"#fff";
     card.innerHTML=`
       <div class="pc-emoji">${h.emoji}</div>
       <div class="pc-name">${h.name}</div>
+      <div style="font-size:10px;color:${col};font-weight:700;margin-bottom:3px;">${rarityLabels[h.rarity]||h.rarity}</div>
       ${owned
         ? '<div class="pc-owned">✅ Débloqué</div>'
-        : `<div class="pc-price">🔮 50 Perles</div>
-           <button class="btn-buy-pearl" ${pearls<50?'disabled':''} onclick="buyHeroWithPearls(${i})">Acheter</button>`
+        : `<div class="pc-price">🔮 ${price} Perles</div>
+           <button class="btn-buy-pearl" ${pearls<price?'disabled':''} onclick="buyHeroWithPearls(${i})">Acheter</button>`
       }
     `;
     grid.appendChild(card);
   });
 }
 function buyHeroWithPearls(i){
+  const price=getHeroPrice(heroes[i]);
   if(hData[i].unlocked){document.getElementById("shop-feedback").textContent="❌ Déjà débloqué !";return;}
-  if(pearls<50){document.getElementById("shop-feedback").textContent="❌ Pas assez de Perles (50 🔮 requis) !";return;}
-  pearls-=50;
+  if(pearls<price){document.getElementById("shop-feedback").textContent="❌ Pas assez de Perles ("+price+" 🔮 requis) !";return;}
+  pearls-=price;
   hData[i].unlocked=true;
   saveState();updateUI();
   document.getElementById("shop-pearls").textContent=pearls;
