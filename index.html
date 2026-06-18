@@ -1584,6 +1584,10 @@ const heroes=[
   {emoji:"🔱",name:"Titan",      rarity:"legendary", color:"#f9c74f", hp:250,dmg:30, spd:1.6, shot:{type:"meteor",  r:11},super:{id:"impact",    name:"Jugement Final",     cd:15, emoji:"⚜️"}},
   // ===== MYSTÉRIEUX (1) =====
   {emoji:"👁️",name:"L'Inconnu", rarity:"mystery",   color:"#cc00ff", hp:150,dmg:20, spd:2.5, shot:{type:"ghost",   r:8}, super:{id:"chaos",     name:"Chaos Absolu",       cd:12, emoji:"🌀"}},
+  // ===== NOUVEAUX HÉROS SPÉCIAUX =====
+  {emoji:"🛡️",name:"Paladin",   rarity:"epic",      color:"#4895ef", hp:200,dmg:10, spd:1.8, shot:{type:"square",  r:7}, super:{id:"fortress",  name:"Forteresse",         cd:10, emoji:"🛡️"}},
+  {emoji:"🌀",name:"Phantôme",  rarity:"superrare", color:"#9b5de5", hp:80, dmg:14, spd:2.9, shot:{type:"ghost",   r:6}, super:{id:"blink",     name:"Téléportation",      cd:8,  emoji:"✨"}},
+  {emoji:"🪄",name:"Illusionniste",rarity:"mythic", color:"#ff6b9d", hp:90, dmg:13, spd:2.7, shot:{type:"star",    r:6}, super:{id:"mirror",    name:"Armée de Clones",    cd:12, emoji:"👯"}},
 ];
 let hData=heroes.map((_,i)=>({unlocked:i===0,level:1,trophies:0}));
 let selected=0,trophies=0,money=0,pearls=0;
@@ -1850,6 +1854,10 @@ function getSuperDesc(id){
     undertow: "<strong>Une vague sous-marine</strong> dans la direction visée emporte tous les ennemis proches, leur infligeant des dégâts proportionnels à leur proximité.",
     // Légendaire / Mystérieux
     chaos:    "<strong>Tous les ennemis deviennent fous pendant 5 secondes</strong> et s'attaquent entre eux. Pendant ce chaos total, tu es intouchable — profites-en pour tout dévaster.",
+    // Nouveaux héros
+    fortress: "Active un <strong>bouclier impénétrable pendant 5 secondes</strong> ET reflète les balles ennemies vers leur source. Plus tu absorbes de tirs, plus les balles réfléchies font de dégâts.",
+    blink:    "<strong>Téléporte-toi instantanément</strong> à l'endroit où pointe ton joystick droit, jusqu'à 400 pixels de distance. Laisse un éclair violet à ta position précédente. Parfait pour fuir ou surprendre.",
+    mirror:   "Invoque <strong>4 clones de toi-même pendant 4 secondes</strong> qui tournent autour du joueur, tirent sur les ennemis et absorbent les balles. Chaque clone a 30% de ta vie maximale.",
   };
   return d[id]||"";
 }
@@ -2520,6 +2528,16 @@ let W,H;
 let playerX,playerY,playerHP,maxHP,playerSpd,playerDmg;
 let gemBonus;
 let bullets,enemies,crates,gems,particles,splatters,keys;
+// ---- POWER-UPS ----
+let powerups=[];
+const POWERUP_TYPES=[
+  {id:"heal",  emoji:"❤️", color:"#ff4d6d", label:"+50 HP"},
+  {id:"speed", emoji:"⚡", color:"#ffd166", label:"Vitesse x1.5", duration:5},
+  {id:"damage",emoji:"🔥", color:"#f3722c", label:"Dégâts x2",   duration:6},
+];
+let speedBuff=false,speedBuffTimer=0;
+let damageBuff=false,damageBuffTimer=0;
+let playerBaseSpd=0,playerBaseDmg2=0;
 let playerSpawnTime=0;
 let kills,totalEnemies,gameRunning,gameTime,gameLoop,timerInterval,lastShoot;
 let sessionCoins,sessionGems;
@@ -2670,6 +2688,14 @@ function initGame(){
   camX=playerX-W/2;camY=playerY-H/2;
   bullets=[];enemies=[];crates=[];gems=[];particles=[];splatters=[];
   keys={};
+  // Réinitialise les power-ups
+  powerups=[];
+  speedBuff=false;speedBuffTimer=0;
+  damageBuff=false;damageBuffTimer=0;
+  playerBaseSpd=h.spd+d.level*0.12;
+  playerBaseDmg2=h.dmg+d.level*3;
+  // Planifie des apparitions de power-ups toutes les 12-20 secondes
+  schedulePowerup();
   kills=0;totalEnemies=10;
   playerSpawnTime=performance.now();
   gameTime=0;lastShoot=0;sessionCoins=0;sessionGems=0;
@@ -2749,6 +2775,125 @@ function initGame(){
     gameLoop=requestAnimationFrame(loop);
   }
   gameLoop=requestAnimationFrame(loop);
+}
+
+// ===================== POWER-UPS =====================
+function schedulePowerup(){
+  if(!gameRunning)return;
+  const delay=(12+Math.random()*12)*1000;
+  setTimeout(()=>{
+    if(!gameRunning)return;
+    spawnPowerup();
+    schedulePowerup();
+  },delay);
+}
+
+function spawnPowerup(){
+  const t=POWERUP_TYPES[Math.floor(Math.random()*POWERUP_TYPES.length)];
+  let x,y;
+  // Zone de spawn aléatoire loin du centre
+  do{x=120+Math.random()*(WORLD_W-240);y=120+Math.random()*(WORLD_H-240);}
+  while(Math.sqrt((x-WORLD_W/2)**2+(y-WORLD_H/2)**2)<200);
+  powerups.push({x,y,type:t,r:16,floatT:Math.random()*6.28,oy:0,collected:false,born:performance.now()});
+}
+
+function collectPowerup(p){
+  p.collected=true;
+  spawnParticles(p.x,p.y,p.type.color,18);
+  vibrate(35);
+  switch(p.type.id){
+    case"heal":
+      const healAmt=Math.round(maxHP*0.4);
+      playerHP=Math.min(maxHP,playerHP+healAmt);
+      updateHealthBar();
+      showBuff("❤️ +"+healAmt+" HP !");
+      break;
+    case"speed":
+      if(!speedBuff){playerSpd=playerBaseSpd*1.5;}
+      speedBuff=true;speedBuffTimer=p.type.duration;
+      showBuff("⚡ Vitesse x1.5 pendant "+p.type.duration+"s !");
+      break;
+    case"damage":
+      if(!damageBuff){playerDmg=playerBaseDmg2*2;}
+      damageBuff=true;damageBuffTimer=p.type.duration;
+      showBuff("🔥 Dégâts x2 pendant "+p.type.duration+"s !");
+      break;
+  }
+}
+
+function drawPowerups(){
+  const now=performance.now();
+  for(let p of powerups){
+    if(p.collected)continue;
+    const age=(now-p.born)/1000;
+    if(age>25)continue; // disparaît après 25s
+    p.floatT+=0.03;p.oy=Math.sin(p.floatT)*6;
+    const sx=p.x-camX,sy=p.y-camY+p.oy;
+    if(sx<-40||sx>W+40||sy<-40||sy>H+40)continue;
+    // Pulse glow
+    const pulse=0.5+Math.sin(p.floatT*2)*0.2;
+    ctx.save();
+    ctx.shadowBlur=18+pulse*10;ctx.shadowColor=p.type.color;
+    // Circle bg
+    ctx.globalAlpha=0.85;
+    ctx.fillStyle=p.type.color+"44";
+    ctx.beginPath();ctx.arc(sx,sy,p.r+4,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=p.type.color+"99";
+    ctx.beginPath();ctx.arc(sx,sy,p.r,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=1;
+    // Emoji
+    ctx.font="18px serif";ctx.textAlign="center";ctx.textBaseline="middle";
+    ctx.fillText(p.type.emoji,sx,sy);
+    // Timer bar (disparaît progressivement)
+    const remaining=1-Math.min(1,age/25);
+    ctx.globalAlpha=0.5*remaining;
+    ctx.fillStyle=p.type.color;
+    ctx.fillRect(sx-p.r,sy+p.r+4,p.r*2*remaining,3);
+    ctx.restore();
+  }
+}
+
+function updatePowerups(dt){
+  const now=performance.now();
+  // Buff timers
+  if(speedBuff){
+    speedBuffTimer=Math.max(0,speedBuffTimer-dt/1000);
+    if(speedBuffTimer<=0){speedBuff=false;playerSpd=playerBaseSpd;}
+  }
+  if(damageBuff){
+    damageBuffTimer=Math.max(0,damageBuffTimer-dt/1000);
+    if(damageBuffTimer<=0){damageBuff=false;playerDmg=playerBaseDmg2;}
+  }
+  // Pickup detection + cleanup
+  powerups=powerups.filter(p=>{
+    if(p.collected)return false;
+    const age=(now-p.born)/1000;
+    if(age>25)return false;
+    const dx=p.x-playerX,dy=p.y-playerY;
+    if(dx*dx+dy*dy<(20+p.r)*(20+p.r)){collectPowerup(p);return false;}
+    return true;
+  });
+}
+
+function drawPowerupHUD(){
+  // Affiche les buffs actifs en haut à gauche de l'écran
+  let buffY=80;
+  if(speedBuff){
+    ctx.save();
+    ctx.fillStyle="rgba(0,0,0,.55)";
+    ctx.beginPath();ctx.roundRect(10,buffY,110,26,8);ctx.fill();
+    ctx.font="bold 13px Nunito, sans-serif";ctx.fillStyle="#ffd166";ctx.textAlign="left";ctx.textBaseline="middle";
+    ctx.fillText("⚡ "+Math.ceil(speedBuffTimer)+"s",18,buffY+13);
+    ctx.restore();buffY+=32;
+  }
+  if(damageBuff){
+    ctx.save();
+    ctx.fillStyle="rgba(0,0,0,.55)";
+    ctx.beginPath();ctx.roundRect(10,buffY,110,26,8);ctx.fill();
+    ctx.font="bold 13px Nunito, sans-serif";ctx.fillStyle="#f3722c";ctx.textAlign="left";ctx.textBaseline="middle";
+    ctx.fillText("🔥 "+Math.ceil(damageBuffTimer)+"s",18,buffY+13);
+    ctx.restore();
+  }
 }
 
 function spawnEnemy(level, heroIndex){
@@ -3325,6 +3470,8 @@ function update(dt){
   bullets=bullets.filter(b=>b.life>0);
   for(let p of particles){p.x+=p.vx*(dt/16);p.y+=p.vy*(dt/16);p.life-=dt/16;}
   particles=particles.filter(p=>p.life>0);
+  // Power-ups
+  updatePowerups(dt);
 }
 
 function killEnemy(en){
@@ -3823,6 +3970,115 @@ function activateSuper(){
           if(en.hp<=0&&!en.dead){killEnemy(en);}
         }
       });
+      break;
+    }
+
+    // ===== NOUVEAUX HÉROS =====
+    case "fortress": { // Paladin — bouclier qui reflète les balles ennemies
+      superFlash("#4895ef","0.4");
+      playerShielded=true;superActive=true;superTimer=5;
+      spawnParticles(playerX,playerY,"#4895ef",30);
+      showBuff("🛡️ Forteresse ! Balles réfléchies 5s !");
+      // Override: reflect bullets en cours
+      const fortressInterval=setInterval(()=>{
+        if(!playerShielded||!gameRunning){clearInterval(fortressInterval);return;}
+        // Réflexion : retourner les balles ennemies proches
+        bullets.forEach(b=>{
+          if(b.fromPlayer)return;
+          const dx=b.x-playerX,dy=b.y-playerY;
+          if(dx*dx+dy*dy<(30*30)){
+            b.fromPlayer=true;b.fromEnemy=null;
+            b.vx=-b.vx;b.vy=-b.vy;
+            b.dmg=(playerDmg*0.8);
+            spawnParticles(b.x,b.y,"#4895ef",3);
+          }
+        });
+      },50);
+      setTimeout(()=>{
+        playerShielded=false;superActive=false;
+        clearInterval(fortressInterval);
+      },5000);
+      break;
+    }
+
+    case "blink": { // Phantôme — téléportation directionnelle instantanée
+      superFlash("#9b5de5","0.3");
+      // Laisse un fantôme à la position précédente
+      spawnParticles(playerX,playerY,"#9b5de5",20);
+      const blinkDist=400;
+      const blinkDx=rjDX||0,blinkDy=rjDY||1;
+      const blinkLen=Math.sqrt(blinkDx*blinkDx+blinkDy*blinkDy)||1;
+      const newX=Math.max(30,Math.min(WORLD_W-30,playerX+blinkDx/blinkLen*blinkDist));
+      const newY=Math.max(30,Math.min(WORLD_H-30,playerY+blinkDy/blinkLen*blinkDist));
+      // Trail d'éclairs entre ancienne et nouvelle position
+      const steps=8;
+      for(let i=0;i<=steps;i++){
+        const tx=playerX+(newX-playerX)*(i/steps);
+        const ty=playerY+(newY-playerY)*(i/steps);
+        setTimeout(()=>spawnParticles(tx,ty,"#c77dff",4),i*20);
+      }
+      playerX=newX;playerY=newY;
+      playerInvisible=true;
+      setTimeout(()=>{playerInvisible=false;},400);
+      spawnParticles(playerX,playerY,"#9b5de5",20);
+      showBuff("✨ Téléportation !");
+      break;
+    }
+
+    case "mirror": { // Illusionniste — invoque 4 clones tournants
+      superFlash("#ff6b9d","0.3");
+      spawnParticles(playerX,playerY,"#ff6b9d",25);
+      const cloneCount=4;
+      const cloneHP=maxHP*0.3;
+      // Les clones tournent autour du joueur et tirent
+      const mirrorClones=[];
+      for(let i=0;i<cloneCount;i++){
+        mirrorClones.push({angle:i*Math.PI*2/cloneCount,hp:cloneHP,maxHp:cloneHP,alive:true});
+      }
+      let mirrorAngle=0;
+      const mirrorInterval=setInterval(()=>{
+        if(!gameRunning){clearInterval(mirrorInterval);return;}
+        mirrorAngle+=0.04;
+        const orbitR=70;
+        mirrorClones.forEach((clone,i)=>{
+          if(!clone.alive)return;
+          const ang=mirrorAngle+i*Math.PI*2/cloneCount;
+          clone.x=playerX+Math.cos(ang)*orbitR;
+          clone.y=playerY+Math.sin(ang)*orbitR;
+          // Le clone absorbe les balles ennemies
+          bullets.forEach(b=>{
+            if(b.fromPlayer)return;
+            const dx=b.x-clone.x,dy=b.y-clone.y;
+            if(dx*dx+dy*dy<(14*14)){
+              clone.hp-=(b.dmg||5);b.life=0;
+              spawnParticles(clone.x,clone.y,"#ff6b9d",3);
+              if(clone.hp<=0){clone.alive=false;spawnParticles(clone.x,clone.y,"#ff6b9d",12);}
+            }
+          });
+          // Le clone tire sur l'ennemi le plus proche toutes les 800ms
+          if(!clone._lastShot||performance.now()-clone._lastShot>800){
+            clone._lastShot=performance.now();
+            const nearestEnemy=enemies.filter(e=>!e.dead).reduce((best,e)=>{
+              const d=(e.x-clone.x)**2+(e.y-clone.y)**2;
+              return (!best||d<best.d)?{e,d}:best;
+            },null);
+            if(nearestEnemy&&nearestEnemy.d<300*300){
+              const ang2=Math.atan2(nearestEnemy.e.y-clone.y,nearestEnemy.e.x-clone.x);
+              bullets.push({x:clone.x,y:clone.y,vx:Math.cos(ang2)*9,vy:Math.sin(ang2)*9,
+                life:1,dist:0,fromPlayer:true,maxDist:350,rainbowColor:"#ff6b9d"});
+            }
+          }
+        });
+        // Dessine les clones (via particles pour ne pas modifier le moteur)
+        mirrorClones.forEach(clone=>{
+          if(!clone.alive)return;
+          spawnParticles(clone.x,clone.y,"#ff6b9d",1);
+        });
+        // Enlève les clones morts
+        if(mirrorClones.every(c=>!c.alive)) clearInterval(mirrorInterval);
+      },50);
+      showBuff("👯 4 Clones invoqués !");
+      setTimeout(()=>{clearInterval(mirrorInterval);},4000);
       break;
     }
   } // end switch
@@ -4554,6 +4810,9 @@ function draw(){
     ctx.restore();
   }
 
+  // ---- POWER-UPS ----
+  drawPowerups();
+
   // Crates
   for(let c of crates){
     if(c.broken)continue;
@@ -4686,6 +4945,8 @@ function draw(){
 
   drawJoystick(ljActive?ljBaseX:W*0.18,ljActive?ljBaseY:H-110,ljDX,ljDY,ljActive,"#4cc9f0","Move");
   drawJoystick(rjActive?rjBaseX:W*0.82,rjActive?rjBaseY:H-110,rjDX,rjDY,rjActive,"#f3722c","Fire");
+  // ---- BUFFS HUD ----
+  drawPowerupHUD();
   if(typeof drawMPOverlay==="function") drawMPOverlay();
 }
 
