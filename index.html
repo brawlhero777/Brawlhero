@@ -9721,36 +9721,36 @@ function startQuestCountdown(){
 // ===== SYSTÈME DE SAISON =============================================
 // =====================================================================
 const SEASON_REWARDS=[
-  {level:1,  emoji:'🪙',  name:'100 Pièces',        pts:0,   reward:{coins:100}},
-  {level:2,  emoji:'📦',  name:'Boîte Mystère',      pts:100, reward:{box:1}},
-  {level:3,  emoji:'🪙',  name:'150 Pièces',         pts:250, reward:{coins:150}},
-  {level:4,  emoji:'🔮',  name:'5 Perles Rares',     pts:450, reward:{pearls:5}},
-  {level:5,  emoji:'📦',  name:'Pack 3 Boîtes',      pts:700, reward:{box:3}},
-  {level:6,  emoji:'🪙',  name:'200 Pièces',         pts:1000,reward:{coins:200}},
-  {level:7,  emoji:'🔮',  name:'10 Perles Rares',    pts:1350,reward:{pearls:10}},
-  {level:8,  emoji:'🎁',  name:'Boîte Cosmétique',   pts:1750,reward:{cosmobox:1}},
-  {level:9,  emoji:'🪙',  name:'300 Pièces',         pts:2200,reward:{coins:300}},
-  {level:10, emoji:'🌟',  name:'Pack Légendaire',     pts:2700,reward:{coins:500,pearls:20}},
-  {level:11, emoji:'🪙',  name:'250 Pièces',         pts:3300,reward:{coins:250}},
-  {level:12, emoji:'📦',  name:'Pack 3 Boîtes',      pts:3950,reward:{box:3}},
-  {level:13, emoji:'🎁',  name:'Boîte Cosmétique',   pts:4650,reward:{cosmobox:1}},
-  {level:14, emoji:'🪙',  name:'400 Pièces',         pts:5400,reward:{coins:400}},
-  {level:15, emoji:'👑',  name:'Récompense Ultime',  pts:6200,reward:{coins:1000,pearls:30}},
-  {level:16, emoji:'🪙',  name:'300 Pièces',         pts:7100,reward:{coins:300}},
-  {level:17, emoji:'📦',  name:'Boîte Garantie',     pts:8100,reward:{guaranteed:1}},
-  {level:18, emoji:'🔮',  name:'20 Perles',          pts:9200,reward:{pearls:20}},
-  {level:19, emoji:'🪙',  name:'500 Pièces',         pts:10400,reward:{coins:500}},
-  {level:20, emoji:'💎',  name:'Méga Récompense',    pts:11700,reward:{coins:2000,pearls:50}},
-  {level:21, emoji:'🪙',  name:'400 Pièces',         pts:13100,reward:{coins:400}},
-  {level:22, emoji:'📦',  name:'Pack 5 Boîtes',      pts:14600,reward:{box:5}},
-  {level:23, emoji:'🔮',  name:'25 Perles',          pts:16200,reward:{pearls:25}},
-  {level:24, emoji:'🪙',  name:'600 Pièces',         pts:17900,reward:{coins:600}},
-  {level:25, emoji:'🏆',  name:'Récompense Max',     pts:19700,reward:{coins:3000,pearls:100}},
-  {level:26, emoji:'🪙',  name:'500 Pièces',         pts:21600,reward:{coins:500}},
-  {level:27, emoji:'📦',  name:'Boîte Garantie',     pts:23600,reward:{guaranteed:1}},
-  {level:28, emoji:'🔮',  name:'30 Perles',          pts:25700,reward:{pearls:30}},
-  {level:29, emoji:'🪙',  name:'800 Pièces',         pts:27900,reward:{coins:800}},
-  {level:30, emoji:'🌈',  name:'Récompense Légendaire',pts:30200,reward:{coins:5000,pearls:200}},
+  {level:1,  emoji:'🪙',  name:'100 Pièces',          pts:0,    reward:{coins:100}},
+  {level:2,  emoji:'🪙',  name:'150 Pièces',           pts:100,  reward:{coins:150}},
+  {level:3,  emoji:'📦',  name:'Boîte',                pts:250,  reward:{box:1}},
+  {level:4,  emoji:'🎁',  name:'Boîte Cosmétique',     pts:450,  reward:{cosmobox:1}},
+  {level:5,  emoji:'🎁',  name:'Boîte Cosmétique',     pts:700,  reward:{cosmobox:1}},
+  {level:6,  emoji:'🪙',  name:'200 Pièces',           pts:1000, reward:{coins:200}},
+  {level:7,  emoji:'🎁',  name:'Boîte Cosmétique',     pts:1350, reward:{cosmobox:1}},
+  {level:8,  emoji:'📦',  name:'Boîte',                pts:1750, reward:{box:1}},
+  {level:9,  emoji:'🪙',  name:'300 Pièces',           pts:2200, reward:{coins:300}},
+  {level:10, emoji:'🌟',  name:'Pack Légendaire',       pts:2700, reward:{coins:500,cosmobox:1}},
+  {level:11, emoji:'📦',  name:'Boîte',                pts:3300, reward:{box:1}},
+  {level:12, emoji:'🎁',  name:'Boîte Cosmétique',     pts:3950, reward:{cosmobox:1}},
+  {level:13, emoji:'🎁',  name:'Boîte Cosmétique',     pts:4650, reward:{cosmobox:1}},
+  {level:14, emoji:'🪙',  name:'400 Pièces',           pts:5400, reward:{coins:400}},
+  {level:15, emoji:'👑',  name:'Récompense Ultime',    pts:6200, reward:{coins:1000,cosmobox:1}},
+  {level:16, emoji:'📦',  name:'Boîte',                pts:7100, reward:{box:1}},
+  {level:17, emoji:'🪙',  name:'350 Pièces',           pts:8100, reward:{coins:350}},
+  {level:18, emoji:'🎁',  name:'Boîte Cosmétique',     pts:9200, reward:{cosmobox:1}},
+  {level:19, emoji:'🪙',  name:'500 Pièces',           pts:10400,reward:{coins:500}},
+  {level:20, emoji:'💎',  name:'Méga Récompense',      pts:11700,reward:{coins:2000,cosmobox:1}},
+  {level:21, emoji:'📦',  name:'Boîte',                pts:13100,reward:{box:1}},
+  {level:22, emoji:'🎁',  name:'Boîte Cosmétique',     pts:14600,reward:{cosmobox:1}},
+  {level:23, emoji:'🎁',  name:'Boîte Cosmétique',     pts:16200,reward:{cosmobox:1}},
+  {level:24, emoji:'🪙',  name:'600 Pièces',           pts:17900,reward:{coins:600}},
+  {level:25, emoji:'🏆',  name:'Récompense Max',       pts:19700,reward:{coins:3000,cosmobox:1}},
+  {level:26, emoji:'📦',  name:'Boîte',                pts:21600,reward:{box:1}},
+  {level:27, emoji:'🪙',  name:'600 Pièces',           pts:23600,reward:{coins:600}},
+  {level:28, emoji:'🎁',  name:'Boîte Cosmétique',     pts:25700,reward:{cosmobox:1}},
+  {level:29, emoji:'🪙',  name:'800 Pièces',           pts:27900,reward:{coins:800}},
+  {level:30, emoji:'🌈',  name:'Récompense Légendaire',pts:30200,reward:{cosmobox:2,box:2}},
 ];
 const SEASON_DURATION_MS=30*24*60*60*1000; // 30 jours
 
@@ -9860,7 +9860,23 @@ function claimSeasonReward(level){
   if(r.reward.pearls){ pearls+=r.reward.pearls; }
   if(r.reward.box){ money+=r.reward.box*50; } // Converti en pièces
   if(r.reward.guaranteed){ money+=200; } // Converti en pièces
-  if(r.reward.cosmobox){ openCosmoBox(); } // Ouvre une boîte cosmétique
+  if(r.reward.cosmobox){
+    // Ouvre les boîtes cosmétiques en séquence
+    const count = r.reward.cosmobox;
+    let i = 0;
+    function openNext(){
+      if(i >= count) return;
+      i++;
+      // Pour les suivantes, attendre que la box soit fermée
+      const origBoxCb = boxCb;
+      openCosmoBox();
+      if(i < count){
+        // patch boxCb pour chaîner
+        boxCb = function(){ if(origBoxCb) origBoxCb(); setTimeout(openNext, 300); };
+      }
+    }
+    openNext();
+  }
   saveState(); updateUI();
   renderSeason();
   const fb=document.createElement('div');
