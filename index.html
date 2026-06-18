@@ -2528,6 +2528,8 @@ let W,H;
 let playerX,playerY,playerHP,maxHP,playerSpd,playerDmg;
 let gemBonus;
 let bullets,enemies,crates,gems,particles,splatters,keys;
+// ---- DAMAGE NUMBERS ----
+let dmgNumbers=[];
 // ---- POWER-UPS ----
 let powerups=[];
 const POWERUP_TYPES=[
@@ -2688,6 +2690,7 @@ function initGame(){
   camX=playerX-W/2;camY=playerY-H/2;
   bullets=[];enemies=[];crates=[];gems=[];particles=[];splatters=[];
   keys={};
+  dmgNumbers=[];
   // Réinitialise les power-ups
   powerups=[];
   speedBuff=false;speedBuffTimer=0;
@@ -2775,6 +2778,53 @@ function initGame(){
     gameLoop=requestAnimationFrame(loop);
   }
   gameLoop=requestAnimationFrame(loop);
+}
+
+// ===================== DAMAGE NUMBERS =====================
+function spawnDmgNumber(x, y, value, color, isCrit){
+  dmgNumbers.push({
+    x, y,
+    vy: -(1.8 + Math.random()*0.8),
+    vx: (Math.random()-0.5)*1.2,
+    life: 1,
+    maxLife: 1,
+    text: isCrit ? "💥"+Math.round(value) : Math.round(value),
+    color: color||"#fff",
+    size: isCrit ? 22 : 14 + Math.min(Math.round(value/8), 10),
+    isCrit,
+  });
+}
+
+function updateDmgNumbers(dt){
+  for(let d of dmgNumbers){
+    d.x+=d.vx*(dt/16);
+    d.y+=d.vy*(dt/16);
+    d.vy+=0.04*(dt/16); // gravity
+    d.life-=dt/900;
+  }
+  dmgNumbers=dmgNumbers.filter(d=>d.life>0);
+}
+
+function drawDmgNumbers(){
+  for(let d of dmgNumbers){
+    const alpha=Math.min(1,d.life*2);
+    const sx=d.x-camX, sy=d.y-camY;
+    ctx.save();
+    ctx.globalAlpha=alpha;
+    ctx.font=`bold ${d.size}px 'Boogaloo', cursive`;
+    ctx.textAlign="center";ctx.textBaseline="middle";
+    // Outline noir
+    ctx.strokeStyle="#000";ctx.lineWidth=3;
+    ctx.strokeText(d.text, sx, sy);
+    ctx.fillStyle=d.color;
+    ctx.fillText(d.text, sx, sy);
+    // Glow sur les crits
+    if(d.isCrit){
+      ctx.shadowBlur=14;ctx.shadowColor=d.color;
+      ctx.fillText(d.text, sx, sy);
+    }
+    ctx.restore();
+  }
 }
 
 // ===================== POWER-UPS =====================
@@ -3353,7 +3403,12 @@ function update(dt){
         en._lastHurt=performance.now();
         en._lastHitBy="player";
         b.life=0;
-        spawnParticles(en.x,en.y,en.color,4);
+        // Particules d'impact améliorées
+        spawnParticles(en.x,en.y,en.color,6);
+        spawnImpactBurst(en.x,en.y,en.color);
+        // Chiffre de dégâts flottant
+        const isCrit=Math.random()<0.15;
+        spawnDmgNumber(en.x+(Math.random()-0.5)*20, en.y-en.r, isCrit?dmg*1.5:dmg, isCrit?"#f9c74f":en.color, isCrit);
         // MP: if this is a real remote player, tell them they got hit (they own their HP)
         if(en._isRemote&&typeof mpSendHit==="function") mpSendHit(en._pid,dmg);
         // Super charges on hit — chaque balle = 1 hit
@@ -3400,6 +3455,7 @@ function update(dt){
         en._lastHitBy=b.fromEnemy||null;
         b.life=0;
         spawnParticles(en.x,en.y,en.color,5);
+        spawnDmgNumber(en.x+(Math.random()-0.5)*16, en.y-en.r, dmg2, "#ff8888", false);
         if(en._isRemote&&typeof mpSendHit==="function") mpSendHit(en._pid,dmg2);
         if(en.hp<=0){
           if(en._isRemote){
@@ -3472,6 +3528,8 @@ function update(dt){
   particles=particles.filter(p=>p.life>0);
   // Power-ups
   updatePowerups(dt);
+  // Damage numbers
+  updateDmgNumbers(dt);
 }
 
 function killEnemy(en){
@@ -4089,6 +4147,18 @@ function spawnParticles(x,y,color,n){
     particles.push({x,y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,life:20+Math.random()*10,color});
   }
 }
+
+// Burst d'impact amélioré : étoiles + anneau
+function spawnImpactBurst(x,y,color){
+  // Anneau d'onde de choc
+  const ring={x,y,r:4,maxR:30,color,life:1,type:"ring",born:performance.now()};
+  particles.push({x,y,vx:0,vy:0,life:12,color,_ring:true,_ringR:4,_ringMaxR:28});
+  // Éclats directionnels
+  for(let i=0;i<5;i++){
+    const ang=Math.random()*Math.PI*2, spd=2+Math.random()*4;
+    particles.push({x,y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,life:10+Math.random()*6,color,_star:true});
+  }
+}
 function updateHealthBar(){
   const pct=Math.max(0,playerHP/maxHP)*100;
   const bar=document.getElementById("health-bar");
@@ -4429,6 +4499,203 @@ function drawDetailedMap(ctx,M){
       ctx.beginPath();ctx.moveTo(gx,gy2);ctx.lineTo(gx+rng(i*5+103)*6-3,gy2-gh);ctx.stroke();
       ctx.beginPath();ctx.moveTo(gx+4,gy2);ctx.lineTo(gx+4+rng(i*5+104)*6-3,gy2-gh*.8);ctx.stroke();
     }
+    ctx.restore();
+  }
+
+  // ── FORÊT DENSE ──────────────────────────────────────────────
+  if(M.id==="forest"){
+    // Brume verte qui pulse
+    ctx.save();
+    for(let i=0;i<8;i++){
+      const fx=rng(i*7+200)*WW, fy=rng(i*7+201)*WH;
+      const fr=120+rng(i*7+202)*180;
+      const falpha=0.06+Math.sin(t*0.5+i*1.3)*0.03;
+      const fg=ctx.createRadialGradient(fx,fy,0,fx,fy,fr);
+      fg.addColorStop(0,`rgba(30,120,20,${falpha})`);
+      fg.addColorStop(1,"rgba(30,120,20,0)");
+      ctx.fillStyle=fg;ctx.beginPath();ctx.arc(fx,fy,fr,0,Math.PI*2);ctx.fill();
+    }
+    ctx.restore();
+    // Lianes pendantes (lignes courbes vertes)
+    ctx.save();ctx.strokeStyle="rgba(20,80,10,0.35)";ctx.lineWidth=2;
+    for(let i=0;i<25;i++){
+      const lx=rng(i*6+210)*WW;
+      const ly=rng(i*6+211)*WH;
+      const llen=40+rng(i*6+212)*60;
+      ctx.beginPath();ctx.moveTo(lx,ly);
+      ctx.bezierCurveTo(lx+10,ly+llen*.3,lx-12,ly+llen*.6,lx+5,ly+llen);
+      ctx.stroke();
+    }
+    ctx.restore();
+    // Champignons géants
+    ctx.save();
+    for(let i=0;i<12;i++){
+      const mx=rng(i*5+220)*WW, my=rng(i*5+221)*WH;
+      if(Math.sqrt((mx-cx)**2+(my-cy)**2)<160)continue;
+      const mr=8+rng(i*5+222)*14;
+      const pulse=0.8+Math.sin(t*1.5+i)*0.1;
+      // Pied
+      ctx.fillStyle="#3a2a20";
+      ctx.fillRect(mx-mr*.2,my,mr*.4,mr*.8);
+      // Chapeau
+      const mgd=ctx.createRadialGradient(mx,my-mr*.2,0,mx,my,mr*pulse);
+      mgd.addColorStop(0,"#ff4466");mgd.addColorStop(0.6,"#cc2244");mgd.addColorStop(1,"rgba(150,10,30,0)");
+      ctx.fillStyle=mgd;
+      ctx.beginPath();ctx.ellipse(mx,my,mr*pulse,mr*.6*pulse,0,0,Math.PI*2);ctx.fill();
+      // Taches blanches
+      ctx.fillStyle="rgba(255,255,255,0.7)";
+      ctx.beginPath();ctx.arc(mx-mr*.3,my-mr*.2,mr*.12,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(mx+mr*.2,my-mr*.1,mr*.09,0,Math.PI*2);ctx.fill();
+    }
+    ctx.restore();
+    // Lucioles vertes
+    ctx.save();
+    for(let i=0;i<30;i++){
+      const fx=rng(i*4+230)*WW+Math.sin(t*0.6+i)*25;
+      const fy=rng(i*4+231)*WH+Math.cos(t*0.5+i*1.2)*18;
+      const fa=0.3+Math.sin(t*3+i)*0.5;
+      ctx.globalAlpha=Math.max(0,fa);
+      ctx.shadowBlur=12;ctx.shadowColor="#80ff40";
+      ctx.fillStyle="#a0ff60";ctx.beginPath();ctx.arc(fx,fy,2,0,Math.PI*2);ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // ── DONJON ──────────────────────────────────────────────────
+  if(M.id==="dungeon"){
+    // Dalles de pierre
+    ctx.save();ctx.strokeStyle="rgba(80,50,20,0.3)";ctx.lineWidth=1.5;
+    const TILE_S=90;
+    for(let ty2=0;ty2<WH;ty2+=TILE_S){
+      for(let tx2=0;tx2<WW;tx2+=TILE_S){
+        const offset=(Math.floor(ty2/TILE_S)%2)*TILE_S/2;
+        ctx.strokeRect(tx2+offset,ty2,TILE_S,TILE_S);
+        // Fissures
+        if(rng(tx2*.01+ty2*.007)>0.6){
+          ctx.beginPath();
+          ctx.moveTo(tx2+offset+rng(tx2)*TILE_S*.5,ty2+rng(ty2)*TILE_S*.5);
+          ctx.lineTo(tx2+offset+rng(tx2+1)*TILE_S,ty2+rng(ty2+1)*TILE_S);
+          ctx.stroke();
+        }
+      }
+    }
+    ctx.restore();
+    // Torches vacillantes
+    ctx.save();
+    const torchPositions=[[WW*.2,WH*.2],[WW*.8,WH*.2],[WW*.2,WH*.8],[WW*.8,WH*.8],[cx,WH*.15],[cx,WH*.85]];
+    for(let [tx3,ty3] of torchPositions){
+      const flicker=0.6+Math.sin(t*8+tx3)*0.2+Math.sin(t*13+ty3)*0.15;
+      // Lueur orange sur le sol
+      const tg=ctx.createRadialGradient(tx3,ty3,0,tx3,ty3,80);
+      tg.addColorStop(0,`rgba(255,120,0,${0.18*flicker})`);
+      tg.addColorStop(1,"rgba(255,80,0,0)");
+      ctx.fillStyle=tg;ctx.beginPath();ctx.arc(tx3,ty3,80,0,Math.PI*2);ctx.fill();
+      // Torche
+      ctx.fillStyle="#6a3010";ctx.fillRect(tx3-3,ty3-18,6,18);
+      // Flamme
+      ctx.globalAlpha=flicker;
+      ctx.shadowBlur=16;ctx.shadowColor="#ff8800";
+      ctx.fillStyle="#ff6600";ctx.beginPath();
+      ctx.ellipse(tx3,ty3-22,5*flicker,10*flicker,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#ffcc00";ctx.beginPath();
+      ctx.ellipse(tx3,ty3-24,3*flicker,6*flicker,0,0,Math.PI*2);ctx.fill();
+      ctx.globalAlpha=1;ctx.shadowBlur=0;
+    }
+    ctx.restore();
+    // Toiles d'araignée dans les coins
+    ctx.save();ctx.strokeStyle="rgba(180,180,180,0.25)";ctx.lineWidth=0.8;
+    [[0,0],[WW,0],[0,WH],[WW,WH]].forEach(([spx,spy])=>{
+      for(let r=20;r<80;r+=18){
+        ctx.beginPath();ctx.arc(spx,spy,r,0,Math.PI/2);ctx.stroke();
+      }
+      for(let a=0;a<Math.PI/2;a+=Math.PI/8){
+        ctx.beginPath();ctx.moveTo(spx,spy);ctx.lineTo(spx+Math.cos(a)*75,spy+Math.sin(a)*75);ctx.stroke();
+      }
+    });
+    ctx.restore();
+    // Crânes décoratifs
+    ctx.save();ctx.font="20px serif";ctx.textAlign="center";ctx.textBaseline="middle";
+    ctx.globalAlpha=0.25;
+    for(let i=0;i<8;i++){
+      const skx=rng(i*9+300)*WW, sky=rng(i*9+301)*WH;
+      if(Math.sqrt((skx-cx)**2+(sky-cy)**2)<200)continue;
+      ctx.fillText("💀",skx,sky);
+    }
+    ctx.restore();
+  }
+
+  // ── ESPACE ──────────────────────────────────────────────────
+  if(M.id==="space"){
+    // Étoiles fixes (fond)
+    ctx.save();
+    for(let i=0;i<200;i++){
+      const sx=rng(i*6+400)*WW, sy=rng(i*6+401)*WH;
+      const sr=0.4+rng(i*6+402)*2;
+      const spulse=0.4+Math.sin(t*0.8+i)*0.4;
+      ctx.globalAlpha=spulse*(0.4+rng(i*6+403)*0.6);
+      ctx.fillStyle=["#fff","#aaccff","#ffddaa","#ffaacc"][i%4];
+      ctx.beginPath();ctx.arc(sx,sy,sr,0,Math.PI*2);ctx.fill();
+    }
+    ctx.restore();
+    // Nébuleuses colorées
+    ctx.save();
+    ctx.globalCompositeOperation="lighter";
+    const nebulae=[
+      {x:WW*.2,y:WH*.3,r:200,c:"rgba(80,40,180,0.06)"},
+      {x:WW*.75,y:WH*.6,r:240,c:"rgba(180,40,80,0.05)"},
+      {x:WW*.5,y:WH*.8,r:180,c:"rgba(40,120,200,0.06)"},
+      {x:WW*.1,y:WH*.7,r:160,c:"rgba(80,200,120,0.04)"},
+    ];
+    for(let nb of nebulae){
+      const ng=ctx.createRadialGradient(nb.x+Math.sin(t*.2)*20,nb.y+Math.cos(t*.15)*15,0,nb.x,nb.y,nb.r);
+      ng.addColorStop(0,nb.c);ng.addColorStop(1,"rgba(0,0,0,0)");
+      ctx.fillStyle=ng;ctx.beginPath();ctx.arc(nb.x,nb.y,nb.r,0,Math.PI*2);ctx.fill();
+    }
+    ctx.restore();
+    // Astéroïdes dérivants
+    ctx.save();
+    for(let i=0;i<10;i++){
+      const ax=((rng(i*8+410)*WW+t*8*(i%2===0?1:-1)*0.5))%WW;
+      const ay=((rng(i*8+411)*WH+t*5*(i%3===0?1:-1)*0.3))%WH;
+      const ar=6+rng(i*8+412)*12;
+      // Ombre
+      ctx.globalAlpha=0.2;ctx.fillStyle="#000";
+      ctx.beginPath();ctx.ellipse(ax+ar*.3,ay+ar*.3,ar*.9,ar*.5,0,0,Math.PI*2);ctx.fill();
+      // Corps
+      ctx.globalAlpha=1;
+      const ag=ctx.createRadialGradient(ax-ar*.3,ay-ar*.3,0,ax,ay,ar);
+      ag.addColorStop(0,"#5a5a7a");ag.addColorStop(0.7,"#2a2a4a");ag.addColorStop(1,"#0a0a18");
+      ctx.fillStyle=ag;
+      ctx.beginPath();
+      ctx.moveTo(ax+ar*Math.cos(rng(i)*6.28),ay+ar*Math.sin(rng(i)*6.28));
+      for(let p=1;p<7;p++){
+        const pa=p*Math.PI*2/6+rng(i)*0.5;
+        const pr=ar*(0.6+rng(i+p)*0.4);
+        ctx.lineTo(ax+Math.cos(pa)*pr,ay+Math.sin(pa)*pr);
+      }
+      ctx.closePath();ctx.fill();
+    }
+    ctx.restore();
+    // Étoiles filantes
+    ctx.save();
+    for(let i=0;i<4;i++){
+      const phase=(t*0.4+i*0.9)%1;
+      const sx2=phase*WW*1.4-WW*.2;
+      const sy2=rng(i*3+420)*WH;
+      const slen=60+rng(i*3+421)*80;
+      const salpha=Math.sin(phase*Math.PI)*0.7;
+      ctx.globalAlpha=salpha;
+      const sg=ctx.createLinearGradient(sx2,sy2,sx2-slen,sy2+slen*.4);
+      sg.addColorStop(0,"rgba(200,220,255,0.9)");
+      sg.addColorStop(1,"rgba(200,220,255,0)");
+      ctx.strokeStyle=sg;ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(sx2,sy2);ctx.lineTo(sx2-slen,sy2+slen*.4);ctx.stroke();
+    }
+    ctx.restore();
+    // Grille de station spatiale (lignes tech)
+    ctx.save();ctx.strokeStyle="rgba(60,80,180,0.1)";ctx.lineWidth=1;
+    for(let gx=0;gx<WW;gx+=100){ctx.beginPath();ctx.moveTo(gx,0);ctx.lineTo(gx,WH);ctx.stroke();}
+    for(let gy=0;gy<WH;gy+=100){ctx.beginPath();ctx.moveTo(0,gy);ctx.lineTo(WW,gy);ctx.stroke();}
     ctx.restore();
   }
 
@@ -4790,10 +5057,25 @@ function draw(){
 
   // Particles
   for(let p of particles){
-    ctx.globalAlpha=Math.max(0,p.life/30);
-    ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,3,0,Math.PI*2);ctx.fill();
+    const alpha=Math.max(0,p.life/30);
+    ctx.globalAlpha=alpha;
+    if(p._ring){
+      // Anneau d'onde de choc
+      const progress=1-(p.life/12);
+      const rr=4+progress*24;
+      ctx.strokeStyle=p.color;ctx.lineWidth=2.5*(1-progress);
+      ctx.shadowBlur=8;ctx.shadowColor=p.color;
+      ctx.beginPath();ctx.arc(p.x,p.y,rr,0,Math.PI*2);ctx.stroke();
+    } else if(p._star){
+      // Éclat étoilé
+      ctx.fillStyle=p.color;
+      ctx.shadowBlur=6;ctx.shadowColor=p.color;
+      ctx.beginPath();ctx.arc(p.x,p.y,2.5,0,Math.PI*2);ctx.fill();
+    } else {
+      ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,3,0,Math.PI*2);ctx.fill();
+    }
   }
-  ctx.globalAlpha=1;
+  ctx.globalAlpha=1;ctx.shadowBlur=0;
 
   // Gems (floating)
   for(let g of gems){
@@ -4947,6 +5229,8 @@ function draw(){
   drawJoystick(rjActive?rjBaseX:W*0.82,rjActive?rjBaseY:H-110,rjDX,rjDY,rjActive,"#f3722c","Fire");
   // ---- BUFFS HUD ----
   drawPowerupHUD();
+  // ---- DAMAGE NUMBERS ----
+  drawDmgNumbers();
   if(typeof drawMPOverlay==="function") drawMPOverlay();
 }
 
@@ -5454,6 +5738,9 @@ function playMapMusic(mapId){
   else if(mapId==='snow') playSnowMusic(now,master);
   else if(mapId==='lava') playLavaMusic(now,master);
   else if(mapId==='night') playNightMusic(now,master);
+  else if(mapId==='forest') playForestMusic(now,master);
+  else if(mapId==='dungeon') playDungeonMusic(now,master);
+  else if(mapId==='space') playSpaceMusic(now,master);
 }
 
 // 🌿 HERBE — pop tropical, steel drums ensoleillés
@@ -5768,6 +6055,152 @@ function playNightMusic(now,master){
   sched(now);
 }
 
+// 🌲 FORÊT — ambiance mystique, flûtes et percussions tribales
+function playForestMusic(now,master){
+  const BPM=90,beat=60/BPM,LOOP=16*beat;
+  const scale=[261.63,293.66,311.13,349.23,392,440,466.16,523.25];
+  // Nappe de fond (bourdon grave de forêt)
+  [[65.41,82.41,98],[87.31,110,130.81]].forEach(ch=>{
+    ch.forEach(f=>{
+      const o=audioCtx.createOscillator();const g=audioCtx.createGain();
+      o.type='sine';o.frequency.value=f;o.detune.value=(Math.random()-0.5)*8;
+      g.gain.setValueAtTime(0,now);g.gain.linearRampToValueAtTime(0.055,now+2.0);
+      o.connect(g);g.connect(master);o.start(now);o.stop(now+LOOP*20);musicNodes.push(o);
+    });
+  });
+  // Vent (bruit filtré)
+  const wind=makeNoiseLoop(350,1.8,0.018,master);musicNodes.push(wind);
+  function sched(t){
+    if(!musicNodes.includes(master))return;
+    // Flûte (triangle = timbre chaud et mystique)
+    const fluteArr=[0,0,2,3,2,0,3,5,3,2,0,2,5,7,5,3];
+    let mt=t;
+    fluteArr.forEach((idx,i)=>{
+      const f=scale[Math.min(idx,scale.length-1)]*(i>8?2:1);
+      if(i%3!==1){const n=playNote(f,'triangle',mt,beat*(i%4===3?1.5:0.75),0.09,master,i%2===0?10:-10);musicNodes.push(n);}
+      mt+=beat;
+    });
+    // Percussions tribales (odd rhythms)
+    [0,1.5,3,4,5.5,7,8,9.5,11,12,13.5,15].forEach(pos=>{
+      const dT=t+pos*beat;
+      const o=audioCtx.createOscillator();const g=audioCtx.createGain();
+      o.type='sine';o.frequency.setValueAtTime(120+Math.random()*40,dT);
+      o.frequency.exponentialRampToValueAtTime(50,dT+0.1);
+      g.gain.setValueAtTime(0.28,dT);g.gain.exponentialRampToValueAtTime(0.001,dT+0.15);
+      o.connect(g);g.connect(master);o.start(dT);o.stop(dT+0.18);musicNodes.push(o);
+    });
+    // Contrebasse (roots)
+    [130.81,110,123.47,116.54].forEach((f,i)=>{
+      const n=makeBass(f,t+i*4*beat,3.5*beat,0.18,master);musicNodes.push(n);
+    });
+    setTimeout(()=>sched(t+LOOP),LOOP*1000-200);
+  }
+  sched(now);
+}
+
+// 🏰 DONJON — metal lourd, cordes de sombre et batterie épique
+function playDungeonMusic(now,master){
+  const BPM=140,beat=60/BPM,LOOP=16*beat;
+  const scale=[146.83,155.56,174.61,196,207.65,233.08,246.94,261.63];
+  // Drone de donjon (cordes graves saturées)
+  [[73.42,92.5,110],[55,69.3,82.41]].forEach(ch=>{
+    ch.forEach(f=>{
+      const o=audioCtx.createOscillator();const g=audioCtx.createGain();
+      o.type='sawtooth';o.frequency.value=f;o.detune.value=(Math.random()-0.5)*15;
+      g.gain.setValueAtTime(0,now);g.gain.linearRampToValueAtTime(0.06,now+1.0);
+      o.connect(g);g.connect(master);o.start(now);o.stop(now+LOOP*20);musicNodes.push(o);
+    });
+  });
+  function sched(t){
+    if(!musicNodes.includes(master))return;
+    // Mélodie sombre (sawtooth = métal)
+    const mArr=[0,0,1,0,3,2,0,1,3,5,3,1,6,5,3,0];
+    let mt=t;
+    mArr.forEach((idx,i)=>{
+      const f=scale[idx];
+      const n=playNote(f,'sawtooth',mt,beat*0.55,0.07,master,i%2===0?-8:8);
+      musicNodes.push(n);mt+=beat;
+    });
+    // Double kick (pattern metal lourd)
+    [0,.25,.5,1,1.25,1.75,2,2.5,3,3.25,3.75,4].forEach(pos=>{
+      const kT=t+pos*beat;
+      const o=audioCtx.createOscillator();const g=audioCtx.createGain();
+      o.type='sine';o.frequency.setValueAtTime(180,kT);o.frequency.exponentialRampToValueAtTime(40,kT+0.1);
+      g.gain.setValueAtTime(0.45,kT);g.gain.exponentialRampToValueAtTime(0.001,kT+0.14);
+      o.connect(g);g.connect(master);o.start(kT);o.stop(kT+0.18);musicNodes.push(o);
+    });
+    // Snare métal
+    for(let i=0;i<4;i++){
+      const sT=t+(i*4+2)*beat;
+      const o=audioCtx.createOscillator();const g=audioCtx.createGain();
+      o.type='square';o.frequency.value=200+Math.random()*100;
+      g.gain.setValueAtTime(0.22,sT);g.gain.exponentialRampToValueAtTime(0.001,sT+0.12);
+      o.connect(g);g.connect(master);o.start(sT);o.stop(sT+0.15);musicNodes.push(o);
+    }
+    // Basse lourde (pattern metal)
+    [146.83,0,146.83,155.56,0,130.81,0,138.59,
+     146.83,0,138.59,0,123.47,0,130.81,146.83].forEach((f,i)=>{
+      if(f>0){const n=makeBass(f,t+i*(beat/2),beat*0.4,0.3,master);musicNodes.push(n);}
+    });
+    setTimeout(()=>sched(t+LOOP),LOOP*1000-200);
+  }
+  sched(now);
+}
+
+// 🚀 ESPACE — synthwave électronique, arpèges cosmiques et basses spatiales
+function playSpaceMusic(now,master){
+  const BPM=120,beat=60/BPM,LOOP=16*beat;
+  const scale=[261.63,311.13,349.23,392,466.16,523.25,622.25,698.46];
+  // Pad cosmique (lent, large, spatial)
+  [[130.81,155.56,185],[98,123.47,155.56]].forEach(ch=>{
+    ch.forEach(f=>{
+      const o=audioCtx.createOscillator();const g=audioCtx.createGain();
+      o.type='sine';o.frequency.value=f;o.detune.value=(Math.random()-0.5)*20;
+      g.gain.setValueAtTime(0,now);g.gain.linearRampToValueAtTime(0.045,now+3.0);
+      o.connect(g);g.connect(master);o.start(now);o.stop(now+LOOP*20);musicNodes.push(o);
+    });
+  });
+  function sched(t){
+    if(!musicNodes.includes(master))return;
+    // Arpège synthwave (montée et descente cosmique)
+    const arp=[0,2,4,6,7,6,4,2,0,2,4,5,7,5,4,0];
+    let mt=t;
+    arp.forEach((idx,i)=>{
+      const f=scale[Math.min(idx,scale.length-1)]*(i>8?2:1);
+      const n=playNote(f,'square',mt,beat*0.45,0.065,master,i%2===0?15:-15);
+      musicNodes.push(n);mt+=beat*.5;
+    });
+    // Lead synthwave (mélodie principale)
+    const lead=[[523.25,beat*2],[622.25,beat],[698.46,beat*1.5],[622.25,beat*.5],
+      [523.25,beat*2],[466.16,beat*2],[392,beat*4]];
+    let lt=t+8*beat;
+    lead.forEach(([f,d])=>{const n=playNote(f,'sawtooth',lt,d*.9,0.07,master,0);musicNodes.push(n);lt+=d;});
+    // Kick électronique 4/4
+    for(let i=0;i<4;i++){
+      const kT=t+i*4*beat;
+      const o=audioCtx.createOscillator();const g=audioCtx.createGain();
+      o.type='sine';o.frequency.setValueAtTime(200,kT);o.frequency.exponentialRampToValueAtTime(40,kT+0.15);
+      g.gain.setValueAtTime(0.4,kT);g.gain.exponentialRampToValueAtTime(0.001,kT+0.2);
+      o.connect(g);g.connect(master);o.start(kT);o.stop(kT+0.25);musicNodes.push(o);
+    }
+    // Hi-hat synthétique
+    for(let i=0;i<16;i++){
+      const hT=t+i*beat;
+      const o=audioCtx.createOscillator();const g=audioCtx.createGain();
+      o.type='square';o.frequency.value=12000+Math.random()*3000;
+      const vol=i%4===0?0.016:i%2===0?0.010:0.006;
+      g.gain.setValueAtTime(vol,hT);g.gain.exponentialRampToValueAtTime(0.0001,hT+0.04);
+      o.connect(g);g.connect(master);o.start(hT);o.stop(hT+0.06);musicNodes.push(o);
+    }
+    // Sub-bass spatiale (profonde)
+    [130.81,155.56,146.83,123.47].forEach((f,i)=>{
+      const n=makeBass(f,t+i*4*beat,3.8*beat,0.22,master);musicNodes.push(n);
+    });
+    setTimeout(()=>sched(t+LOOP),LOOP*1000-200);
+  }
+  sched(now);
+}
+
 // 🛒 BOUTIQUE — jazz bossa nova détendu, balancé et cool
 function playShopMusic(){
   if(getSettings().music===false) return;
@@ -6006,7 +6439,55 @@ const MAPS=[
     wallOuter:"#06060f",wallInner:"#20205a",wallGlow:"rgba(150,100,255,0.45)",
     borderStyle:"rgba(199,125,255,.5)",
     color:"#080e08"
-  }
+  },
+  {
+    id:"forest",
+    name:"Forêt Dense",
+    emoji:"🌲",
+    desc:"Sous-bois touffu, lianes et champignons géants. Brume mystérieuse.",
+    bgColor:"#0a1a0a",
+    grassColor:"#122212",
+    stripeA:"rgba(0,60,0,0.07)",stripeB:"rgba(60,120,20,0.04)",
+    patchColor:"rgba(20,60,10,0.65)",patchColor0:"rgba(20,60,10,0)",
+    treeColors:["#0d3d0d","#1a6610"],
+    rockColor1:"#4a6040",rockColor2:"#1a3010",
+    centerGlow:"rgba(40,200,80,0.22)",
+    wallOuter:"#050d05",wallInner:"#1a3a10",wallGlow:"rgba(60,220,80,0.4)",
+    borderStyle:"rgba(80,200,80,.5)",
+    color:"#122212"
+  },
+  {
+    id:"dungeon",
+    name:"Donjon",
+    emoji:"🏰",
+    desc:"Crypte sombre, torches vacillantes et dalles de pierre maudites.",
+    bgColor:"#0a0808",
+    grassColor:"#141010",
+    stripeA:"rgba(60,20,0,0.08)",stripeB:"rgba(80,40,10,0.04)",
+    patchColor:"rgba(50,20,0,0.6)",patchColor0:"rgba(50,20,0,0)",
+    treeColors:["#2a1a00","#3a2600"],
+    rockColor1:"#4a3828",rockColor2:"#1a1008",
+    centerGlow:"rgba(255,80,0,0.2)",
+    wallOuter:"#0a0500",wallInner:"#2a1800",wallGlow:"rgba(255,120,0,0.5)",
+    borderStyle:"rgba(255,140,0,.5)",
+    color:"#141010"
+  },
+  {
+    id:"space",
+    name:"Espace",
+    emoji:"🚀",
+    desc:"Station orbitale flottante, astéroïdes et nébuleuses colorées.",
+    bgColor:"#000008",
+    grassColor:"#04040f",
+    stripeA:"rgba(0,0,80,0.06)",stripeB:"rgba(40,0,80,0.04)",
+    patchColor:"rgba(10,0,40,0.65)",patchColor0:"rgba(10,0,40,0)",
+    treeColors:["#0a0a30","#1a1a50"],
+    rockColor1:"#3a3a6a",rockColor2:"#0a0a1a",
+    centerGlow:"rgba(80,120,255,0.3)",
+    wallOuter:"#020208",wallInner:"#0a0a30",wallGlow:"rgba(100,140,255,0.5)",
+    borderStyle:"rgba(100,140,255,.6)",
+    color:"#04040f"
+  },
 ];
 let selectedMap=MAPS[0];
 
