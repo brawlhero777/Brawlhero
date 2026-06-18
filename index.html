@@ -2777,7 +2777,26 @@ function initGame(){
   playerDmg=h.dmg+d.level*3;
   gemBonus={dmg:0,hp:0};
 
-  playerX=WORLD_W/2;playerY=WORLD_H/2;
+  // 11 spawn points répartis équitablement sur la map
+  const _SP=[
+    {x:WORLD_W*.15,y:WORLD_H*.15},{x:WORLD_W*.50,y:WORLD_H*.10},{x:WORLD_W*.85,y:WORLD_H*.15},
+    {x:WORLD_W*.10,y:WORLD_H*.50},{x:WORLD_W*.90,y:WORLD_H*.50},
+    {x:WORLD_W*.15,y:WORLD_H*.85},{x:WORLD_W*.50,y:WORLD_H*.90},{x:WORLD_W*.85,y:WORLD_H*.85},
+    {x:WORLD_W*.30,y:WORLD_H*.35},{x:WORLD_W*.70,y:WORLD_H*.35},{x:WORLD_W*.50,y:WORLD_H*.65}
+  ];
+  // Mélange fixé par seed aléatoire de partie (même seed = même ordre pour tous)
+  // Utilise la seed partagée via Firebase si disponible (multijoueur), sinon seed locale
+  const _seed=(typeof window._sharedSpawnSeed==='number'?window._sharedSpawnSeed:Date.now()%86400000);
+  const _shuffSP=[..._SP];
+  for(let _i=_shuffSP.length-1;_i>0;_i--){
+    const _j=Math.floor((_seed*(_i+7)+_i*13)%(_i+1));
+    [_shuffSP[_i],_shuffSP[_j]]=[_shuffSP[_j],_shuffSP[_i]];
+  }
+  window._allSpawnPoints=_shuffSP;
+  // Le slot du joueur local dans le matchmaking (0 par défaut)
+  const _mySlot=(typeof playerSlot==='number'?playerSlot:0);
+  const _mySpawn=_shuffSP[_mySlot%_shuffSP.length];
+  playerX=_mySpawn.x; playerY=_mySpawn.y;
   camX=playerX-W/2;camY=playerY-H/2;
   bullets=[];enemies=[];crates=[];gems=[];particles=[];splatters=[];
   keys={};
@@ -2832,7 +2851,7 @@ function initGame(){
     heroPool=heroPool.concat(extra);
   }
   const assignedHeroes=heroPool.slice(0,totalEnemies);
-  for(let i=0;i<totalEnemies;i++)spawnEnemy(d.level, assignedHeroes[i]);
+  for(let i=0;i<totalEnemies;i++)spawnEnemy(d.level, assignedHeroes[i], i);
   // MP: spawn one enemy slot per real remote player, driven by Firebase instead of AI.
   // Each remote player counts toward totalEnemies (must be defeated to win).
   if(typeof mpSpawnRemoteEnemies==="function") totalEnemies+=mpSpawnRemoteEnemies(d.level);
@@ -3037,13 +3056,21 @@ function drawPowerupHUD(){
   }
 }
 
-function spawnEnemy(level, heroIndex){
-  const side=Math.floor(Math.random()*4);
-  const pad=60;let x,y;
-  if(side===0){x=Math.random()*WORLD_W;y=-pad;}
-  else if(side===1){x=WORLD_W+pad;y=Math.random()*WORLD_H;}
-  else if(side===2){x=Math.random()*WORLD_W;y=WORLD_H+pad;}
-  else{x=-pad;y=Math.random()*WORLD_H;}
+function spawnEnemy(level, heroIndex, slotIndex){
+  // Utilise les spawn points répartis si disponibles, sinon fallback bords
+  let x,y;
+  const sp=window._allSpawnPoints;
+  // slotIndex+1 car slot 0 = joueur local
+  const spIdx=(typeof slotIndex==='number' ? slotIndex+1 : null);
+  if(sp && spIdx!==null && sp[spIdx%sp.length]){
+    x=sp[spIdx%sp.length].x; y=sp[spIdx%sp.length].y;
+  } else {
+    // fallback: spawn aléatoire loin du centre et loin du joueur
+    const ang=Math.random()*Math.PI*2;
+    const dist=350+Math.random()*250;
+    x=Math.max(80,Math.min(WORLD_W-80,WORLD_W/2+Math.cos(ang)*dist));
+    y=Math.max(80,Math.min(WORLD_H-80,WORLD_H/2+Math.sin(ang)*dist));
+  }
 
   // Utilise le héros de la collection si fourni, sinon fallback sur ENEMY_TYPES
   let base;
@@ -7679,7 +7706,13 @@ function mpFinalizeMatch(status, countEl){
   clearTimeout(mmInterval);
   if(mpPlayersRef) mpPlayersRef.off("value"); // stop lobby listener, mpStartGameSync attaches its own
   const realCount = fakePlayers.filter(p=>p && p.isReal).length;
-  if(mpRoomRef) mpRoomRef.child("status").set("started");
+  // Partager la seed de spawn avec tous les joueurs de la room
+  const _spawnSeed = Date.now()%86400000;
+  window._sharedSpawnSeed = _spawnSeed;
+  if(mpRoomRef){
+    mpRoomRef.child("status").set("started");
+    mpRoomRef.child("spawnSeed").set(_spawnSeed);
+  }
   status.textContent = "✅ Partie trouvée !";
   countEl.textContent = "11 / 11";
   mpFillRemainingWithBots(1 + realCount);
@@ -7754,11 +7787,17 @@ function mpSpawnRemoteEnemies(level){
     const t = {...base};
     t.hp=t.hpBase+level*6; t.maxHp=t.hp;
     t.shootTimer=99999; t._lastHurt=0; t.gems=0;
-    // Spread spawn positions around the world so they don't all start stacked
-    const ang = Math.random()*Math.PI*2;
-    const rad = 200+Math.random()*300;
-    const x = Math.max(40,Math.min(WORLD_W-40, WORLD_W/2+Math.cos(ang)*rad));
-    const y = Math.max(40,Math.min(WORLD_H-40, WORLD_H/2+Math.sin(ang)*rad));
+    // Utilise le spawn point assigné au slot de ce joueur réel
+    const sp=window._allSpawnPoints;
+    const remoteSlotIdx = realPlayers.indexOf(p)+1; // +1 car slot 0 = local player
+    let x,y;
+    if(sp && sp[remoteSlotIdx%sp.length]){
+      x=sp[remoteSlotIdx%sp.length].x; y=sp[remoteSlotIdx%sp.length].y;
+    } else {
+      const ang=Math.random()*Math.PI*2; const rad=300+Math.random()*200;
+      x=Math.max(40,Math.min(WORLD_W-40,WORLD_W/2+Math.cos(ang)*rad));
+      y=Math.max(40,Math.min(WORLD_H-40,WORLD_H/2+Math.sin(ang)*rad));
+    }
     const en = {x,y,...t,dead:false,_isRemote:true,_pid:p._pid,
       _fakeName:p.name, _fakeTag:p.tag,
       _lastSyncX:x,_lastSyncY:y,_targetX:x,_targetY:y};
@@ -7924,9 +7963,17 @@ function updateMmBar(joined, total) {
 
 function launchFromMatchmaking() {
   document.getElementById("matchmaking").style.display = "none";
-  // Assign fake player names to enemies (will be read by spawnEnemy)
-  window._fakePlayerNames = fakePlayers.slice(1).map((p,i) => p); // skip slot 0 (human)
-  startGame();
+  window._fakePlayerNames = fakePlayers.slice(1).map((p,i) => p);
+  // Récupérer la seed partagée depuis Firebase avant de lancer
+  if(fdb && mpRoomId){
+    fdb.ref("lobby").child(mpRoomId).child("spawnSeed").once("value", snap=>{
+      const seed=snap.val();
+      if(typeof seed==="number") window._sharedSpawnSeed=seed;
+      startGame();
+    }).catch(()=>{ startGame(); });
+  } else {
+    startGame();
+  }
 }
 
 // ===== ENEMY NAME SYSTEM =====
