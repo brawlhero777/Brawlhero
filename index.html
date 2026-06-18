@@ -316,6 +316,39 @@ canvas{display:block;touch-action:none;}
   transition:.15s;
 }
 #loading-enter:hover{transform:scale(1.07);}
+/* ===== SERVER CHECK OVERLAY (inside loading screen) ===== */
+#server-check-overlay{
+  display:none;
+  position:absolute;inset:0;
+  background:rgba(7,5,26,.96);
+  backdrop-filter:blur(12px);
+  flex-direction:column;align-items:center;justify-content:center;
+  z-index:10;
+  animation:scFadeIn .35s ease forwards;
+}
+@keyframes scFadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+#sc-icon{font-size:54px;margin-bottom:14px;animation:scPulse 1.6s ease-in-out infinite;}
+@keyframes scPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+#sc-title{font-family:'Boogaloo',cursive;font-size:26px;color:#fff;margin-bottom:6px;letter-spacing:.5px;}
+#sc-msg{font-size:13px;color:#a0a0c0;margin-bottom:28px;text-align:center;line-height:1.5;max-width:280px;}
+#sc-spinner{width:44px;height:44px;border:4px solid rgba(255,255,255,.1);border-top-color:#f9c74f;border-radius:50%;animation:scSpin .8s linear infinite;margin-bottom:0;}
+@keyframes scSpin{to{transform:rotate(360deg)}}
+#sc-error-wrap{display:none;flex-direction:column;align-items:center;gap:14px;}
+#sc-error-icon{font-size:52px;animation:scShake .5s ease;}
+@keyframes scShake{0%,100%{transform:rotate(0)}20%{transform:rotate(-10deg)}40%{transform:rotate(10deg)}60%{transform:rotate(-6deg)}80%{transform:rotate(6deg)}}
+#sc-error-title{font-family:'Boogaloo',cursive;font-size:26px;color:#f3722c;text-align:center;}
+#sc-error-msg{font-size:13px;color:#a0a0c0;text-align:center;line-height:1.5;max-width:280px;}
+#sc-retry-btn{
+  padding:14px 44px;border:none;border-radius:50px;
+  font-family:'Boogaloo',cursive;font-size:22px;cursor:pointer;
+  background:linear-gradient(135deg,#f3722c,#f9c74f);color:#1a1a2e;
+  box-shadow:0 4px 24px rgba(243,114,44,.5);
+  animation:enterPulse2 1.2s ease-in-out infinite;
+  transition:.15s;margin-top:6px;
+}
+#sc-retry-btn:hover{transform:scale(1.07);}
+@keyframes enterPulse2{0%,100%{box-shadow:0 4px 20px rgba(243,114,44,.5)}50%{box-shadow:0 4px 36px rgba(249,199,79,.8),0 0 0 6px rgba(243,114,44,.12)}}
+
 @keyframes enterPulse{
   0%,100%{box-shadow:0 4px 20px rgba(249,199,79,.5);}
   50%{box-shadow:0 4px 40px rgba(249,199,79,.9),0 0 60px rgba(243,114,44,.4);}
@@ -1049,7 +1082,7 @@ canvas{display:block;touch-action:none;}
 </audio>
 
 <!-- ÉCRAN DE CHARGEMENT -->
-<div id="loading-screen">
+<div id="loading-screen" style="position:relative;">
   <div id="loading-title">BRAWLHERO</div>
   <p id="loading-sub">10 combattants. Casse des caisses. Survive.</p>
   <div id="loading-bar-wrap">
@@ -1058,6 +1091,24 @@ canvas{display:block;touch-action:none;}
   <div id="loading-pct">0%</div>
   <button id="loading-enter" onclick="enterGame()">▶ ENTRER</button>
   <div id="loading-dots"></div>
+
+  <!-- Server check overlay — shown at 50% -->
+  <div id="server-check-overlay" style="display:none;position:absolute;inset:0;background:rgba(7,5,26,.96);backdrop-filter:blur(12px);flex-direction:column;align-items:center;justify-content:center;z-index:10;animation:scFadeIn .35s ease forwards;">
+    <!-- Connecting state -->
+    <div id="sc-connecting-wrap" style="display:flex;flex-direction:column;align-items:center;">
+      <div id="sc-icon" style="font-size:54px;margin-bottom:14px;animation:scPulse 1.6s ease-in-out infinite;">🌐</div>
+      <div id="sc-title" style="font-family:'Boogaloo',cursive;font-size:26px;color:#fff;margin-bottom:6px;letter-spacing:.5px;">Connexion au serveur</div>
+      <div id="sc-msg" style="font-size:13px;color:#a0a0c0;margin-bottom:28px;text-align:center;line-height:1.5;max-width:280px;">Vérification de la connexion à BrawlHero…</div>
+      <div id="sc-spinner" style="width:44px;height:44px;border:4px solid rgba(255,255,255,.1);border-top-color:#f9c74f;border-radius:50%;animation:scSpin .8s linear infinite;"></div>
+    </div>
+    <!-- Error state -->
+    <div id="sc-error-wrap" style="display:none;flex-direction:column;align-items:center;gap:14px;">
+      <div id="sc-error-icon" style="font-size:52px;">❌</div>
+      <div id="sc-error-title" style="font-family:'Boogaloo',cursive;font-size:26px;color:#f3722c;text-align:center;">Connexion impossible</div>
+      <div id="sc-error-msg" style="font-size:13px;color:#a0a0c0;text-align:center;line-height:1.5;max-width:280px;">Impossible de joindre les serveurs BrawlHero.<br>Vérifie ta connexion internet et réessaie.</div>
+      <button id="sc-retry-btn" onclick="retryConnection()" style="padding:14px 44px;border:none;border-radius:50px;font-family:'Boogaloo',cursive;font-size:22px;cursor:pointer;background:linear-gradient(135deg,#f3722c,#f9c74f);color:#1a1a2e;box-shadow:0 4px 24px rgba(243,114,44,.5);margin-top:6px;">🔄 Relancer</button>
+    </div>
+  </div>
 </div>
 
 <!-- ÉCRAN CRÉATION DE COMPTE -->
@@ -1146,6 +1197,11 @@ canvas{display:block;touch-action:none;}
 <!-- MENU -->
 <div id="menu">
   <canvas id="menu-bg-canvas"></canvas>
+
+  <!-- Bannière hors-ligne (visible seulement si offline) -->
+  <div id="offline-banner" style="display:none;position:relative;z-index:10;width:100%;background:rgba(243,114,44,.18);border-bottom:1px solid rgba(243,114,44,.4);padding:5px 14px;text-align:center;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;color:#f9c74f;letter-spacing:.3px;">
+    📵 Mode hors-ligne — progression sauvegardée localement, sync au retour en ligne
+  </div>
 
   <!-- TOP BAR : ressources -->
   <div id="menu-topbar">
@@ -2890,10 +2946,43 @@ function initGame(){
   },1000);
   cancelAnimationFrame(gameLoop);
   let last=performance.now();
+  // ── Canvas optimisation : skip redundant repaints ──────────────
+  // Track last known "world hash" to detect if anything visible changed.
+  // We still call update() every frame (physics must run), but only
+  // call draw() when something actually changed.
+  let _lastDrawHash = -1;
+  function _worldHash(){
+    // Cheap hash: combine counts + quantised player pos + bullet/particle counts
+    return (enemies.filter(e=>!e.dead).length * 10007)
+         ^ (Math.round(playerX/4) * 3001)
+         ^ (Math.round(playerY/4) * 2003)
+         ^ (bullets.length * 1009)
+         ^ (particles.length * 503)
+         ^ (gems.length * 307)
+         ^ (Math.round(playerHP) * 101)
+         ^ (kills * 53)
+         ^ (zoneActive ? 1 : 0)
+         ^ (superActive ? 2 : 0)
+         ^ (powerups.filter(p=>!p.collected).length * 17);
+  }
+  let _skipDrawCount = 0;
   function loop(now){
     if(!gameRunning)return;
     const dt=Math.min(now-last,50);last=now;
-    update(dt);draw();
+    update(dt);
+    // Always draw if particles/dmg numbers are active (they animate every frame).
+    // Otherwise skip if nothing changed (saves ~30% GPU time on idle frames).
+    const _h = _worldHash();
+    const _hasFx = particles.length > 0 || dmgNumbers.length > 0 || splatters.length > 0;
+    if(!_tabHidden && (_h !== _lastDrawHash || _hasFx || zoneActive || icyFloor)){
+      draw();
+      _lastDrawHash = _h;
+      _skipDrawCount = 0;
+    } else {
+      _skipDrawCount++;
+      // Force a redraw at least every 8 frames to keep animations smooth
+      if(_skipDrawCount >= 8){ draw(); _lastDrawHash = _h; _skipDrawCount = 0; }
+    }
     gameLoop=requestAnimationFrame(loop);
   }
   gameLoop=requestAnimationFrame(loop);
@@ -7008,76 +7097,101 @@ function heroVoice(type){
 
 let _audioUnlocked=false;
 
-function runLoader(onComplete){
-  const fill=document.getElementById("loading-bar-fill");
-  const pct=document.getElementById("loading-pct");
-  const enter=document.getElementById("loading-enter");
-  const dots=document.getElementById("loading-dots");
+// ===================== SERVER CHECK =====================
+// Vérifie la connexion serveur Firebase (obligatoire pour jouer)
+async function checkServerConnection(){
+  // 1. Pas de réseau du tout
+  if(!navigator.onLine) return false;
+  // 2. Tente d'initialiser Firebase (charge les scripts + ping Firestore)
+  try{
+    const ok = await Promise.race([
+      _initFirebase(),
+      new Promise(res=>setTimeout(()=>res(false), 8000)) // timeout 8s
+    ]);
+    if(!ok) return false;
+    // 3. Ping réel : tente de lire un doc vide pour confirmer la connexion
+    await Promise.race([
+      _fbDb.collection("_ping").doc("_").get(),
+      new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")), 5000))
+    ]);
+    return true;
+  }catch(e){
+    return false;
+  }
+}
 
-  // Reset UI state for replay
-  fill.style.width="0%";
-  pct.textContent="0%";
-  enter.style.display="none";
-  if(dots){dots.style.display="block";dots.textContent="";}
-
-  const messages=[
-    {at:0,   text:"Initialisation du moteur…"},
-    {at:12,  text:"Chargement des héros…"},
-    {at:28,  text:"Préparation des maps…"},
-    {at:45,  text:"Chargement des sons…"},
-    {at:60,  text:"Génération de l'arène…"},
-    {at:75,  text:"Synchronisation des données…"},
-    {at:88,  text:"Finalisation…"},
-    {at:97,  text:"Presque prêt…"},
-  ];
-
-  // Durée totale aléatoire entre 4s et 15s
-  const totalMs = 4000 + Math.random() * 11000;
-
-  // Génère des "checkpoints" de progression avec des vitesses irrégulières
-  // Parfois ça bloque (stall), parfois ça avance vite, parfois lentement
+// ===================== LOADER =====================
+function _buildCheckpoints(totalMs, maxProg){
+  // Génère des checkpoints de 0 à maxProg
   let checkpoints = [];
-  let t = 0;
-  let p = 0;
-  while(p < 100){
+  let t = 0, p = 0;
+  while(p < maxProg){
     const roll = Math.random();
-    if(roll < 0.18 && p > 5 && p < 90){
-      // BLOCAGE : reste coincé pendant 0.5 à 3 secondes
-      const stallDur = 500 + Math.random() * 2500;
+    if(roll < 0.18 && p > 5 && p < maxProg - 10){
+      const stallDur = 400 + Math.random() * 1800;
       checkpoints.push({time: t, prog: p, stall: true});
       t += stallDur;
       checkpoints.push({time: t, prog: p, stall: false});
     } else {
-      // Avance d'un bout variable (1% à 18%)
-      const chunk = 1 + Math.random() * 17;
-      const newP = Math.min(100, p + chunk);
-      // Vitesse variable : parfois rapide, parfois lente
-      const speed = 0.3 + Math.random() * 2.2; // px/%ms relatif
+      const chunk = 1 + Math.random() * 14;
+      const newP = Math.min(maxProg, p + chunk);
+      const speed = 0.3 + Math.random() * 2.2;
       const dur = (chunk / 100) * totalMs * speed * (0.4 + Math.random() * 0.8);
       t += Math.max(80, dur);
       p = newP;
       checkpoints.push({time: t, prog: p, stall: false});
     }
   }
-
-  // Normalise les temps pour coller à totalMs
+  // Normalise
   const rawTotal = checkpoints[checkpoints.length-1].time;
   const scale = totalMs / rawTotal;
-  checkpoints = checkpoints.map(c => ({...c, time: c.time * scale}));
+  return checkpoints.map(c => ({...c, time: c.time * scale}));
+}
 
-  let startTime = null;
-  let cpIndex = 0;
-  let currentProgress = 0;
-  let lastMsg = "";
+function runLoader(onComplete){
+  const fill  = document.getElementById("loading-bar-fill");
+  const pct   = document.getElementById("loading-pct");
+  const enter = document.getElementById("loading-enter");
+  const dots  = document.getElementById("loading-dots");
+  const scOverlay    = document.getElementById("server-check-overlay");
+  const scConnecting = document.getElementById("sc-connecting-wrap");
+  const scErrorWrap  = document.getElementById("sc-error-wrap");
+
+  // Reset UI
+  fill.style.width = "0%";
+  pct.textContent  = "0%";
+  enter.style.display = "none";
+  if(dots){ dots.style.display = "block"; dots.textContent = ""; }
+  if(scOverlay)   scOverlay.style.display = "none";
+  if(scConnecting) scConnecting.style.display = "flex";
+  if(scErrorWrap)  scErrorWrap.style.display  = "none";
+
+  // Messages phase 1 (0→50%) et phase 2 (50→100%)
+  const messages = [
+    {at:0,  text:"Initialisation du moteur…"},
+    {at:12, text:"Chargement des héros…"},
+    {at:28, text:"Préparation des maps…"},
+    {at:45, text:"Chargement des sons…"},
+    // 50% → server check happens here
+    {at:52, text:"Génération de l'arène…"},
+    {at:68, text:"Synchronisation des données…"},
+    {at:82, text:"Finalisation…"},
+    {at:94, text:"Presque prêt…"},
+  ];
+
+  // Phase 1 : 0 → 50 % (2–6s)
+  const phase1Ms = 2000 + Math.random() * 4000;
+  // Phase 2 : 50 → 100 % (2–8s)
+  const phase2Ms = 2000 + Math.random() * 6000;
+
   let blinkInterval = null;
-  let isStalling = false;
+  let lastMsg = "";
 
   function getMsg(prog){
     let msg = messages[0].text;
     for(let m of messages){ if(prog >= m.at) msg = m.text; }
     return msg;
   }
-
   function startBlinking(text){
     if(blinkInterval) clearInterval(blinkInterval);
     let show = true;
@@ -7087,63 +7201,150 @@ function runLoader(onComplete){
       dots.textContent = show ? text : text.replace("…","") + " ·";
     }, 420);
   }
-
   function stopBlinking(text){
     if(blinkInterval){ clearInterval(blinkInterval); blinkInterval = null; }
-    dots.textContent = text;
+    if(dots) dots.textContent = text;
+  }
+  function updateBar(prog){
+    fill.style.width = prog + "%";
+    pct.textContent  = Math.floor(prog) + "%";
+    const msg = getMsg(prog);
+    if(msg !== lastMsg){ stopBlinking(msg); lastMsg = msg; }
   }
 
-  function tick(ts){
+  // ── Phase 1 : 0 → 50% ──────────────────────────────────────────
+  let checkpoints1 = _buildCheckpoints(phase1Ms, 50);
+  let startTime = null, cpIdx = 0, curProg = 0;
+
+  function tickPhase1(ts){
     if(!startTime) startTime = ts;
     const elapsed = ts - startTime;
 
-    // Avance dans les checkpoints
-    while(cpIndex < checkpoints.length && checkpoints[cpIndex].time <= elapsed){
-      currentProgress = checkpoints[cpIndex].prog;
-      isStalling = (cpIndex + 1 < checkpoints.length &&
-                    checkpoints[cpIndex+1].prog === checkpoints[cpIndex].prog);
-      cpIndex++;
+    while(cpIdx < checkpoints1.length && checkpoints1[cpIdx].time <= elapsed){
+      curProg = checkpoints1[cpIdx].prog;
+      cpIdx++;
     }
-
-    // Interpolation douce entre deux checkpoints
-    let displayProg = currentProgress;
-    if(cpIndex < checkpoints.length){
-      const prev = cpIndex > 0 ? checkpoints[cpIndex-1] : {time:0, prog:0};
-      const next = checkpoints[cpIndex];
+    let disp = curProg;
+    if(cpIdx < checkpoints1.length){
+      const prev = cpIdx > 0 ? checkpoints1[cpIdx-1] : {time:0,prog:0};
+      const next = checkpoints1[cpIdx];
       if(next.prog !== prev.prog){
-        const ratio = Math.max(0, Math.min(1, (elapsed - prev.time) / (next.time - prev.time)));
-        displayProg = prev.prog + (next.prog - prev.prog) * ratio;
+        const ratio = Math.max(0, Math.min(1, (elapsed-prev.time)/(next.time-prev.time)));
+        disp = prev.prog + (next.prog-prev.prog)*ratio;
       }
     }
+    disp = Math.min(50, disp);
+    updateBar(disp);
 
-    displayProg = Math.min(100, displayProg);
-    fill.style.width = displayProg + "%";
-    pct.textContent = Math.floor(displayProg) + "%";
-
-    // Message avec effet blink si blocage
-    const msg = getMsg(displayProg);
-    if(isStalling && displayProg < 99){
-      if(msg !== lastMsg || !blinkInterval) startBlinking(msg);
+    if(elapsed < phase1Ms && disp < 50){
+      requestAnimationFrame(tickPhase1);
     } else {
-      if(msg !== lastMsg){ stopBlinking(msg); lastMsg = msg; }
-    }
-
-    if(elapsed < totalMs || displayProg < 100){
-      requestAnimationFrame(tick);
-    } else {
+      // Arrived at 50% — show server check
+      updateBar(50);
       stopBlinking("");
-      fill.style.width = "100%";
-      pct.textContent = "100%";
-      dots.textContent = "";
-      setTimeout(()=>{
-        enter.style.display = "block";
-        dots.style.display = "none";
-        if(typeof onComplete==="function") onComplete();
-      }, 350);
+      startServerCheck();
+    }
+  }
+  requestAnimationFrame(tickPhase1);
+
+  // ── Server check (shown at 50%) ─────────────────────────────────
+  function startServerCheck(){
+    if(scOverlay){
+      scOverlay.style.display = "flex";
+      if(scConnecting) scConnecting.style.display = "flex";
+      if(scErrorWrap)  scErrorWrap.style.display  = "none";
+    }
+    // Launch the actual check
+    checkServerConnection().then(ok=>{
+      if(ok){
+        // Success — hide overlay, continue to 100%
+        if(scOverlay){
+          scOverlay.style.opacity = "1";
+          scOverlay.style.transition = "opacity .4s";
+          setTimeout(()=>{
+            scOverlay.style.opacity = "0";
+            setTimeout(()=>{ scOverlay.style.display = "none"; startPhase2(); }, 400);
+          }, 600);
+        } else {
+          startPhase2();
+        }
+      } else {
+        // Failure — show error state
+        showServerError();
+      }
+    });
+  }
+
+  // ── Show error ──────────────────────────────────────────────────
+  function showServerError(){
+    if(scConnecting) scConnecting.style.display = "none";
+    if(scErrorWrap){
+      scErrorWrap.style.display = "flex";
+      // Re-trigger shake animation on the icon
+      const icon = document.getElementById("sc-error-icon");
+      if(icon){ icon.style.animation = "none"; void icon.offsetWidth; icon.style.animation = "scShake .5s ease"; }
     }
   }
 
-  requestAnimationFrame(tick);
+  // Exposed globally so the retry button can call it
+  window.retryConnection = function(){
+    if(scConnecting) scConnecting.style.display = "flex";
+    if(scErrorWrap)  scErrorWrap.style.display  = "none";
+    checkServerConnection().then(ok=>{
+      if(ok){
+        if(scOverlay){
+          scOverlay.style.opacity = "1";
+          scOverlay.style.transition = "opacity .4s";
+          setTimeout(()=>{
+            scOverlay.style.opacity = "0";
+            setTimeout(()=>{ scOverlay.style.display = "none"; startPhase2(); }, 400);
+          }, 600);
+        } else {
+          startPhase2();
+        }
+      } else {
+        showServerError();
+      }
+    });
+  };
+
+  // ── Phase 2 : 50 → 100% ────────────────────────────────────────
+  function startPhase2(){
+    let checkpoints2 = _buildCheckpoints(phase2Ms, 50); // 0→50 remapped as 50→100
+    let st2 = null, ci2 = 0, cp2 = 0;
+    function tickPhase2(ts){
+      if(!st2) st2 = ts;
+      const elapsed = ts - st2;
+      while(ci2 < checkpoints2.length && checkpoints2[ci2].time <= elapsed){
+        cp2 = checkpoints2[ci2].prog;
+        ci2++;
+      }
+      let disp2 = cp2;
+      if(ci2 < checkpoints2.length){
+        const prev = ci2 > 0 ? checkpoints2[ci2-1] : {time:0,prog:0};
+        const next = checkpoints2[ci2];
+        if(next.prog !== prev.prog){
+          const ratio = Math.max(0, Math.min(1, (elapsed-prev.time)/(next.time-prev.time)));
+          disp2 = prev.prog + (next.prog-prev.prog)*ratio;
+        }
+      }
+      disp2 = 50 + Math.min(50, disp2); // shift to 50–100 range
+      updateBar(disp2);
+      if(elapsed < phase2Ms && disp2 < 100){
+        requestAnimationFrame(tickPhase2);
+      } else {
+        updateBar(100);
+        stopBlinking("");
+        if(dots) dots.textContent = "";
+        setTimeout(()=>{
+          enter.style.display = "block";
+          if(dots) dots.style.display = "none";
+          if(typeof onComplete === "function") onComplete();
+        }, 350);
+      }
+    }
+    requestAnimationFrame(tickPhase2);
+  }
 }
 // Initial call on page load (shows "Entrer" button)
 runLoader();
@@ -7216,13 +7417,132 @@ function _initFirebase(){
 // ── Firestore helpers ───────────────────────────────────────────────
 function _emailKey(email){ return email.toLowerCase().replace(/\./g,"_dot_"); }
 
+// ── Offline queue & network indicator ──────────────────────────────
+const _offlineQueue = [];
+let _isOnline = navigator.onLine;
+let _cloudSaveIndicatorEl = null;
+
+function _getOrCreateCloudIndicator(){
+  if(_cloudSaveIndicatorEl) return _cloudSaveIndicatorEl;
+  const el = document.createElement("div");
+  el.id = "cloud-save-indicator";
+  el.style.cssText = [
+    "position:fixed","bottom:12px","left:12px","z-index:99999",
+    "background:rgba(0,0,0,.75)","border-radius:20px","padding:5px 12px",
+    "font-family:'Nunito',sans-serif","font-size:11px","font-weight:700",
+    "color:#a8ff3e","pointer-events:none","opacity:0","transition:opacity .4s",
+    "backdrop-filter:blur(8px)","border:1px solid rgba(168,255,62,.25)",
+    "display:flex","align-items:center","gap:6px"
+  ].join(";");
+  document.body.appendChild(el);
+  _cloudSaveIndicatorEl = el;
+  return el;
+}
+
+let _cloudIndicatorTimer = null;
+function _showCloudIndicator(msg, color, duration){
+  // Only show in menu context (not during game) to avoid HUD clutter
+  if(document.getElementById("gameWrap")?.style.display === "block") return;
+  const el = _getOrCreateCloudIndicator();
+  el.style.color = color || "#a8ff3e";
+  el.style.borderColor = (color||"#a8ff3e")+"44";
+  el.innerHTML = msg;
+  el.style.opacity = "1";
+  clearTimeout(_cloudIndicatorTimer);
+  _cloudIndicatorTimer = setTimeout(()=>{ el.style.opacity = "0"; }, duration||2800);
+}
+
+function _updateNetworkStatus(){
+  _isOnline = navigator.onLine;
+  if(!_isOnline){
+    _showCloudIndicator("📵 Hors-ligne — sauvegarde locale", "#f9c74f", 4000);
+  } else if(_offlineQueue.length > 0){
+    _showCloudIndicator("☁️ Reconnecté — synchronisation…", "#4cc9f0", 3000);
+    _flushOfflineQueue();
+  }
+}
+window.addEventListener("online",  _updateNetworkStatus);
+window.addEventListener("offline", _updateNetworkStatus);
+
+// Pause canvas animations when tab is hidden (saves CPU/battery)
+let _tabHidden = false;
+document.addEventListener("visibilitychange", ()=>{
+  _tabHidden = document.hidden;
+});
+
+function _updateOfflineBanner(){
+  const banner = document.getElementById("offline-banner");
+  if(!banner) return;
+  banner.style.display = navigator.onLine ? "none" : "block";
+}
+// Also update the banner on load and on network change
+window.addEventListener("load", _updateOfflineBanner);
+window.addEventListener("online",  _updateOfflineBanner);
+window.addEventListener("offline", _updateOfflineBanner);
+
+async function _flushOfflineQueue(){
+  while(_offlineQueue.length > 0 && _isOnline){
+    const acc = _offlineQueue.shift();
+    const ok = await _initFirebase();
+    if(!ok) { _offlineQueue.unshift(acc); break; }
+    try{
+      await _fbDb.collection("accounts").doc(_emailKey(acc.email)).set(acc, {merge:true});
+    }catch(e){
+      console.warn("flushQueue error",e);
+      _offlineQueue.unshift(acc);
+      break;
+    }
+  }
+  if(_offlineQueue.length === 0){
+    _showCloudIndicator("☁️ ✅ Synchronisé", "#a8ff3e", 2500);
+  }
+}
+
+// Throttle: max 1 cloud save per 30s per email
+const _lastCloudSave = {};
 async function fbSaveAccount(acc){
+  if(!acc.email) return false;
+  // Always update local cache immediately
+  _localSave(acc);
+  if(!_isOnline){
+    // Store latest state in queue (replace existing entry for same email)
+    const idx = _offlineQueue.findIndex(q=>q.email===acc.email);
+    if(idx>=0) _offlineQueue[idx]=acc; else _offlineQueue.push(acc);
+    _showCloudIndicator("📵 Hors-ligne — données en file", "#f9c74f", 3000);
+    return false;
+  }
+  // Throttle: skip if saved less than 30s ago
+  const now = Date.now();
+  const last = _lastCloudSave[acc.email] || 0;
+  if(now - last < 30000) return true; // skip, already saved recently
+  _lastCloudSave[acc.email] = now;
+
   const ok = await _initFirebase();
-  if(!ok||!acc.email) return false;
+  if(!ok) return false;
   try{
     await _fbDb.collection("accounts").doc(_emailKey(acc.email)).set(acc, {merge:true});
+    _showCloudIndicator("☁️ Sauvegardé", "#a8ff3e", 1800);
     return true;
   }catch(e){ console.warn("fbSave error",e); return false; }
+}
+
+// Force-save (bypasses throttle) — used for critical moments (game end, logout)
+async function fbSaveAccountForce(acc){
+  if(!acc.email) return false;
+  _localSave(acc);
+  if(!_isOnline){
+    const idx = _offlineQueue.findIndex(q=>q.email===acc.email);
+    if(idx>=0) _offlineQueue[idx]=acc; else _offlineQueue.push(acc);
+    return false;
+  }
+  _lastCloudSave[acc.email] = Date.now();
+  const ok = await _initFirebase();
+  if(!ok) return false;
+  try{
+    await _fbDb.collection("accounts").doc(_emailKey(acc.email)).set(acc, {merge:true});
+    _showCloudIndicator("☁️ ✅ Sauvegarde cloud", "#a8ff3e", 2000);
+    return true;
+  }catch(e){ console.warn("fbSaveForce error",e); return false; }
 }
 
 async function fbLoadAccount(email){
@@ -7271,17 +7591,37 @@ function _saveKey(){
   }catch(e){}
   return "brawlheroSave";
 }
-function saveState(){
-  try{
-    const data={hData,selected,trophies,money,pearls};
-    localStorage.setItem(_saveKey(), JSON.stringify(data));
-    // Async cloud sync (fire-and-forget)
+// ── Dirty-flag + periodic cloud save ───────────────────────────────
+let _saveStateDirty = false;
+let _periodicCloudTimer = null;
+
+function _schedulePeriodicCloudSave(){
+  if(_periodicCloudTimer) return;
+  _periodicCloudTimer = setInterval(()=>{
+    if(!_saveStateDirty) return;
     const acc=_localGet();
     if(acc&&acc.email){
       acc.gameState=captureGameState();
       _localSave(acc);
-      fbSaveAccount(acc);
+      fbSaveAccount(acc); // throttled: max 1 per 30s
+      _saveStateDirty = false;
     }
+  }, 30000); // check every 30s
+}
+_schedulePeriodicCloudSave();
+
+function saveState(){
+  try{
+    const data={hData,selected,trophies,money,pearls};
+    localStorage.setItem(_saveKey(), JSON.stringify(data));
+    _saveStateDirty = true;
+    // Immediate local account cache update (no network call here)
+    const acc=_localGet();
+    if(acc&&acc.email){
+      acc.gameState=captureGameState();
+      _localSave(acc);
+    }
+    // Cloud sync handled by periodic timer (every 30s) or force-save at key moments
   }catch(e){}
 }
 function loadState(){
@@ -7460,7 +7800,7 @@ window.addEventListener("load",()=>{
       if(acc&&acc.email){
         acc.gameState=captureGameState();
         _localSave(acc);
-        fbSaveAccount(acc);
+        fbSaveAccountForce(acc); // force-save on return to menu
       }
     };
   }
@@ -7608,11 +7948,18 @@ const _origGoMenu2 = window.goMenu;
     ctx.restore();
   }
 
-  function frame(){
+  // Menu BG canvas: throttled to ~30fps (decorative only, saves battery/GPU)
+  let _menuBgLast = 0;
+  const _MENU_BG_INTERVAL = 1000 / 30;
+  function frame(now){
     if(!document.getElementById("menu")||document.getElementById("menu").style.display==="none"){
       requestAnimationFrame(frame);return;
     }
-    auroraT+=0.012;
+    // Skip if tab is hidden or not enough time has passed (throttle to 30fps)
+    if(_tabHidden || now - _menuBgLast < _MENU_BG_INTERVAL){ requestAnimationFrame(frame); return; }
+    _menuBgLast = now;
+
+    auroraT+=0.024; // doubled step to compensate for ~30fps
     ctx.clearRect(0,0,W,H);
 
     // Dark base
@@ -7628,15 +7975,11 @@ const _origGoMenu2 = window.goMenu;
     ctx.globalCompositeOperation="lighter";
     for(let i=particles.length-1;i>=0;i--){
       const p=particles[i];
-      p.twinkle+=p.twinkleSpeed;
-      p.x+=p.vx; p.y+=p.vy;
+      p.twinkle+=p.twinkleSpeed*2;
+      p.x+=p.vx*2; p.y+=p.vy*2;
       const a=p.alpha*(0.6+0.4*Math.sin(p.twinkle));
       ctx.beginPath();
       ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
-      ctx.fillStyle=p.color.replace(")",`,${a})`).replace("rgb","rgba").replace("#",
-        ()=>{const r=parseInt(p.color.slice(1,3),16),g=parseInt(p.color.slice(3,5),16),b=parseInt(p.color.slice(5,7),16);
-             return `rgba(${r},${g},${b},${a}`;})+"";
-      // simpler approach
       ctx.globalAlpha=a;
       ctx.fillStyle=p.color;
       ctx.fill();
