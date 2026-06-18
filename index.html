@@ -952,9 +952,13 @@ canvas{display:block;touch-action:none;}
     </div>
     <div class="detail-section" style="margin-bottom:14px;">
       <h4 style="font-size:13px;color:#a0a0c0;text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;">🔊 Audio</h4>
-      <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
         <span style="font-size:14px;">Musique</span>
         <label class="toggle-switch"><input type="checkbox" id="set-music" checked onchange="applySettings()"><span class="toggle-slider"></span></label>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:14px;">Effets sonores</span>
+        <label class="toggle-switch"><input type="checkbox" id="set-sfx" checked onchange="applySettings()"><span class="toggle-slider"></span></label>
       </div>
     </div>
     <div class="detail-section" style="margin-bottom:14px;">
@@ -2735,6 +2739,7 @@ function tryShoot(){
   const shotR=heroes[selected].shot.r;
   const maxDist=100+shotR*(150/11);
   bullets.push({x:playerX,y:playerY,vx:ax*10,vy:ay*10,life:1,dist:0,fromPlayer:true,maxDist});
+  if(_audioUnlocked) sfxShoot();
 }
 
 // ===================== START =====================
@@ -3524,6 +3529,7 @@ function update(dt){
         // Particules d'impact améliorées
         spawnParticles(en.x,en.y,en.color,6);
         spawnImpactBurst(en.x,en.y,en.color);
+        if(_audioUnlocked) sfxHitEnemy();
         // Chiffre de dégâts flottant
         const isCrit=Math.random()<0.15;
         spawnDmgNumber(en.x+(Math.random()-0.5)*20, en.y-en.r, isCrit?dmg*1.5:dmg, isCrit?"#f9c74f":en.color, isCrit);
@@ -3595,6 +3601,7 @@ function update(dt){
       playerLastHurt=performance.now();
       spawnParticles(playerX,playerY,"#ff4444",5);
       vibrate(45); // vibration coup reçu
+      if(_audioUnlocked) sfxHitPlayer();
       if(playerHP<=0){playerHP=0;updateHealthBar();heroVoice("die");endGame();return;}
       updateHealthBar();
     }
@@ -3651,6 +3658,7 @@ function update(dt){
 }
 
 function killEnemy(en){
+  if(_audioUnlocked) sfxKill();
   en.dead=true;kills++;
   spawnParticles(en.x,en.y,en.color,10);
   // Vibration sur kill
@@ -3676,6 +3684,7 @@ function killEnemy(en){
 }
 
 function breakCrate(c){
+  if(_audioUnlocked) sfxCrateBreak();
   c.broken=true;
   spawnParticles(c.x,c.y,"#f9c74f",14);
   spawnParticles(c.x,c.y,"#c8a96e",8);
@@ -3694,6 +3703,7 @@ function collectGem(g){
   spawnParticles(playerX,playerY,"#4fffb0",12);
   showBuff(`+${heal}❤️  +3⚔️`);
   vibrate(20); // vibration légère gemme
+  if(_audioUnlocked) sfxGem();
 }
 
 let buffTimeout;
@@ -3734,6 +3744,7 @@ function activateSuper(){
   showBuff(heroes[selected].super.emoji+" "+heroes[selected].super.name+" !");
   startSuperCooldown();
   heroVoice("super");
+  if(_audioUnlocked) sfxSuper();
   vibratePattern([60,30,120]); // vibration super pouvoir
 
   switch(sid){
@@ -5443,6 +5454,7 @@ function showEndScreen(rank){
 
 function winGame(){
   // Player is the last one standing = rank 1
+  if(_audioUnlocked) sfxVictory();
   showEndScreen(1);
 }
 function endGame(){
@@ -5450,6 +5462,7 @@ function endGame(){
   // i.e. how many people are still alive including player... player just died so:
   const aliveEnemies=enemies.filter(e=>!e.dead).length;
   const rank=aliveEnemies+1; // player finished behind all remaining enemies
+  if(_audioUnlocked) sfxDefeat();
   showEndScreen(rank);
 }
 
@@ -6477,6 +6490,227 @@ function playCollectionMusic(){
   sched(now);
 }
 
+// =====================================================================
+// ===== SFX — EFFETS SONORES (tir, impact, kill, victoire, défaite) ===
+// =====================================================================
+
+function sfxEnabled(){
+  try{ return getSettings().sfx!==false; }catch(e){ return true; }
+}
+
+// 🔫 Tir du joueur — bip court et percutant
+function sfxShoot(){
+  if(!sfxEnabled()||!audioCtx) return;
+  const t=audioCtx.currentTime;
+  const o=audioCtx.createOscillator();
+  const g=audioCtx.createGain();
+  o.type='square';
+  o.frequency.setValueAtTime(900,t);
+  o.frequency.exponentialRampToValueAtTime(300,t+0.07);
+  g.gain.setValueAtTime(0.18,t);
+  g.gain.exponentialRampToValueAtTime(0.001,t+0.09);
+  o.connect(g);g.connect(audioCtx.destination);
+  o.start(t);o.stop(t+0.11);
+}
+
+// 💥 Impact sur ennemi — bruit + thump grave
+function sfxHitEnemy(){
+  if(!sfxEnabled()||!audioCtx) return;
+  const t=audioCtx.currentTime;
+  // Punch grave
+  const o=audioCtx.createOscillator();
+  const g=audioCtx.createGain();
+  o.type='sine';
+  o.frequency.setValueAtTime(200,t);
+  o.frequency.exponentialRampToValueAtTime(60,t+0.06);
+  g.gain.setValueAtTime(0.35,t);
+  g.gain.exponentialRampToValueAtTime(0.001,t+0.08);
+  o.connect(g);g.connect(audioCtx.destination);
+  o.start(t);o.stop(t+0.10);
+  // Bruit d'impact court
+  const buf=audioCtx.createBuffer(1,audioCtx.sampleRate*0.06,audioCtx.sampleRate);
+  const d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-(i/d.length),1.5);
+  const src=audioCtx.createBufferSource();src.buffer=buf;
+  const ng=audioCtx.createGain();ng.gain.value=0.22;
+  src.connect(ng);ng.connect(audioCtx.destination);src.start(t);
+}
+
+// 💢 Joueur reçoit un coup — basse lourde + distorsion
+function sfxHitPlayer(){
+  if(!sfxEnabled()||!audioCtx) return;
+  const t=audioCtx.currentTime;
+  const o=audioCtx.createOscillator();
+  const g=audioCtx.createGain();
+  o.type='sawtooth';
+  o.frequency.setValueAtTime(120,t);
+  o.frequency.exponentialRampToValueAtTime(40,t+0.12);
+  g.gain.setValueAtTime(0.45,t);
+  g.gain.exponentialRampToValueAtTime(0.001,t+0.18);
+  o.connect(g);g.connect(audioCtx.destination);
+  o.start(t);o.stop(t+0.22);
+}
+
+// 💀 Kill ennemi — son satisfaisant (ping ascendant)
+function sfxKill(){
+  if(!sfxEnabled()||!audioCtx) return;
+  const t=audioCtx.currentTime;
+  // Ping montant
+  const o=audioCtx.createOscillator();
+  const g=audioCtx.createGain();
+  o.type='triangle';
+  o.frequency.setValueAtTime(440,t);
+  o.frequency.exponentialRampToValueAtTime(880,t+0.08);
+  g.gain.setValueAtTime(0.30,t);
+  g.gain.exponentialRampToValueAtTime(0.001,t+0.20);
+  o.connect(g);g.connect(audioCtx.destination);
+  o.start(t);o.stop(t+0.22);
+  // Double note
+  const o2=audioCtx.createOscillator();
+  const g2=audioCtx.createGain();
+  o2.type='triangle';
+  o2.frequency.setValueAtTime(660,t+0.09);
+  o2.frequency.exponentialRampToValueAtTime(1320,t+0.18);
+  g2.gain.setValueAtTime(0.22,t+0.09);
+  g2.gain.exponentialRampToValueAtTime(0.001,t+0.28);
+  o2.connect(g2);g2.connect(audioCtx.destination);
+  o2.start(t+0.09);o2.stop(t+0.32);
+}
+
+// 🏆 VICTOIRE — fanfare épique montante
+function sfxVictory(){
+  if(!sfxEnabled()||!audioCtx) return;
+  stopMusic(200);
+  ensureAudio();
+  const t=audioCtx.currentTime+0.1;
+  const master=audioCtx.createGain();
+  master.gain.value=0.5;
+  master.connect(audioCtx.destination);
+  const BPM=140,beat=60/BPM;
+  // Fanfare — Sol Maj ascendant
+  const fanfare=[
+    [392,beat*0.5],[523.25,beat*0.5],[659.25,beat*0.5],[784,beat*0.5],
+    [880,beat*1.5],[784,beat*0.5],[880,beat*2]
+  ];
+  let mt=t;
+  fanfare.forEach(([f,d])=>{
+    const o=audioCtx.createOscillator();const g=audioCtx.createGain();
+    o.type='square';o.frequency.value=f;
+    g.gain.setValueAtTime(0,mt);g.gain.linearRampToValueAtTime(0.22,mt+0.02);
+    g.gain.setTargetAtTime(0,mt+d*0.75,d*0.12);
+    o.connect(g);g.connect(master);o.start(mt);o.stop(mt+d+0.1);
+    mt+=d;
+  });
+  // Harmonie basse
+  const bass=[196,261.63,329.63,392,440];
+  bass.forEach((f,i)=>{
+    const o=audioCtx.createOscillator();const g=audioCtx.createGain();
+    o.type='triangle';o.frequency.value=f;
+    g.gain.setValueAtTime(0.12,t+i*beat*0.5);g.gain.exponentialRampToValueAtTime(0.001,t+i*beat*0.5+beat*2);
+    o.connect(g);g.connect(master);o.start(t+i*beat*0.5);o.stop(t+i*beat*0.5+beat*2.2);
+  });
+  // Crash cymbal final
+  const cT=t+6*beat*0.5;
+  const buf=audioCtx.createBuffer(1,audioCtx.sampleRate*0.6,audioCtx.sampleRate);
+  const dd=buf.getChannelData(0);for(let i=0;i<dd.length;i++)dd[i]=(Math.random()*2-1)*Math.pow(1-(i/dd.length),0.4);
+  const src=audioCtx.createBufferSource();src.buffer=buf;
+  const cg=audioCtx.createGain();cg.gain.value=0.3;
+  const cf=audioCtx.createBiquadFilter();cf.type='highpass';cf.frequency.value=4000;
+  src.connect(cf);cf.connect(cg);cg.connect(master);src.start(cT);
+}
+
+// 💀 DÉFAITE — descente grave, son funèbre
+function sfxDefeat(){
+  if(!sfxEnabled()||!audioCtx) return;
+  stopMusic(200);
+  ensureAudio();
+  const t=audioCtx.currentTime+0.15;
+  const master=audioCtx.createGain();
+  master.gain.value=0.45;
+  master.connect(audioCtx.destination);
+  const BPM=80,beat=60/BPM;
+  // Descente chromatique triste
+  const descent=[
+    [392,beat*0.75],[370,beat*0.75],[349,beat*0.75],[330,beat*0.75],
+    [311,beat*1.5],[294,beat*3]
+  ];
+  let mt=t;
+  descent.forEach(([f,d])=>{
+    const o=audioCtx.createOscillator();const g=audioCtx.createGain();
+    o.type='sawtooth';o.frequency.value=f;
+    g.gain.setValueAtTime(0,mt);g.gain.linearRampToValueAtTime(0.18,mt+0.04);
+    g.gain.setTargetAtTime(0,mt+d*0.6,d*0.25);
+    o.connect(g);g.connect(master);o.start(mt);o.stop(mt+d+0.2);
+    mt+=d;
+  });
+  // Basse lourde descendante
+  [196,164.81,146.83,130.81].forEach((f,i)=>{
+    const o=audioCtx.createOscillator();const g=audioCtx.createGain();
+    o.type='triangle';o.frequency.value=f;
+    g.gain.setValueAtTime(0.22,t+i*beat*1.5);g.gain.exponentialRampToValueAtTime(0.001,t+i*beat*1.5+beat*1.6);
+    o.connect(g);g.connect(master);o.start(t+i*beat*1.5);o.stop(t+i*beat*1.5+beat*1.8);
+  });
+  // Bruit sourd final (impact terre)
+  const bT=t+beat*0.5;
+  const buf=audioCtx.createBuffer(1,audioCtx.sampleRate*0.25,audioCtx.sampleRate);
+  const dd=buf.getChannelData(0);for(let i=0;i<dd.length;i++)dd[i]=(Math.random()*2-1)*Math.pow(1-(i/dd.length),2);
+  const src=audioCtx.createBufferSource();src.buffer=buf;
+  const bg=audioCtx.createGain();bg.gain.value=0.35;
+  const bf=audioCtx.createBiquadFilter();bf.type='lowpass';bf.frequency.value=400;
+  src.connect(bf);bf.connect(bg);bg.connect(master);src.start(bT);
+}
+
+// 📦 Caisse cassée — craquement satisfaisant
+function sfxCrateBreak(){
+  if(!sfxEnabled()||!audioCtx) return;
+  const t=audioCtx.currentTime;
+  const buf=audioCtx.createBuffer(1,audioCtx.sampleRate*0.18,audioCtx.sampleRate);
+  const d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-(i/d.length),0.8);
+  const src=audioCtx.createBufferSource();src.buffer=buf;
+  const g=audioCtx.createGain();g.gain.value=0.38;
+  const f=audioCtx.createBiquadFilter();f.type='bandpass';f.frequency.value=600;f.Q.value=0.5;
+  src.connect(f);f.connect(g);g.connect(audioCtx.destination);src.start(t);
+  // Note grave de bois
+  const o=audioCtx.createOscillator();const og=audioCtx.createGain();
+  o.type='triangle';o.frequency.setValueAtTime(180,t);o.frequency.exponentialRampToValueAtTime(55,t+0.12);
+  og.gain.setValueAtTime(0.28,t);og.gain.exponentialRampToValueAtTime(0.001,t+0.18);
+  o.connect(og);og.connect(audioCtx.destination);o.start(t);o.stop(t+0.2);
+}
+
+// 💎 Gemme ramassée — ding cristallin
+function sfxGem(){
+  if(!sfxEnabled()||!audioCtx) return;
+  const t=audioCtx.currentTime;
+  const freqs=[1047,1319,1568];
+  freqs.forEach((f,i)=>{
+    const o=audioCtx.createOscillator();const g=audioCtx.createGain();
+    o.type='sine';o.frequency.value=f;
+    g.gain.setValueAtTime(0,t+i*0.04);
+    g.gain.linearRampToValueAtTime(0.12,t+i*0.04+0.02);
+    g.gain.exponentialRampToValueAtTime(0.001,t+i*0.04+0.25);
+    o.connect(g);g.connect(audioCtx.destination);
+    o.start(t+i*0.04);o.stop(t+i*0.04+0.28);
+  });
+}
+
+// ⚡ Super pouvoir activé — whoosh électrique
+function sfxSuper(){
+  if(!sfxEnabled()||!audioCtx) return;
+  const t=audioCtx.currentTime;
+  const o=audioCtx.createOscillator();const g=audioCtx.createGain();
+  o.type='sawtooth';
+  o.frequency.setValueAtTime(200,t);
+  o.frequency.exponentialRampToValueAtTime(1400,t+0.25);
+  g.gain.setValueAtTime(0.28,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.3);
+  o.connect(g);g.connect(audioCtx.destination);o.start(t);o.stop(t+0.32);
+  // Couche harmonique
+  const o2=audioCtx.createOscillator();const g2=audioCtx.createGain();
+  o2.type='square';o2.frequency.setValueAtTime(100,t);o2.frequency.exponentialRampToValueAtTime(700,t+0.20);
+  g2.gain.setValueAtTime(0.18,t);g2.gain.exponentialRampToValueAtTime(0.001,t+0.25);
+  o2.connect(g2);g2.connect(audioCtx.destination);o2.start(t);o2.stop(t+0.28);
+}
+
+// =====================================================================
+
 const MAPS=[
   {
     id:"grass",
@@ -7386,12 +7620,14 @@ function openSettings(){
 function loadSettings(){
   const s=JSON.parse(localStorage.getItem('gameSettings')||'{}');
   document.getElementById('set-music').checked     = s.music     !== false;
+  document.getElementById('set-sfx').checked       = s.sfx       !== false;
   document.getElementById('set-vibration').checked = s.vibration !== false;
   _applySettingsToGame(s);
 }
 function applySettings(){
   const s={
     music:     document.getElementById('set-music').checked,
+    sfx:       document.getElementById('set-sfx').checked,
     vibration: document.getElementById('set-vibration').checked,
   };
   localStorage.setItem('gameSettings', JSON.stringify(s));
