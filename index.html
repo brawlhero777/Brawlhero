@@ -7,6 +7,7 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Boogaloo&family=Nunito:wght@400;700;900&display=swap');
 *{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;width:100%;}
 body{overflow:hidden;background:#1a1a2e;font-family:'Nunito',sans-serif;user-select:none;-webkit-user-select:none;}
 
 /* ===== MENU — Clash Royale layout ===== */
@@ -64,7 +65,6 @@ body{overflow:hidden;background:#1a1a2e;font-family:'Nunito',sans-serif;user-sel
 .btn-play-cr .play-label{font-size:27px;}
 .play-sublabel{font-family:'Boogaloo',cursive;font-size:11px;color:rgba(255,200,100,.65);letter-spacing:.5px;margin-top:-14px;transform:translateY(-20px);}
 
-/* Legacy btns for other screens */
 .btn{padding:14px 36px;border:none;border-radius:50px;font-family:'Boogaloo',cursive;font-size:22px;cursor:pointer;transition:.15s;}
 .btn-play{background:linear-gradient(135deg,#f9c74f,#f3722c);color:#1a1a2e;box-shadow:0 4px 20px rgba(243,114,44,.5);}
 .btn-play:hover{transform:scale(1.05);}
@@ -278,26 +278,26 @@ canvas{display:block;touch-action:none;}
 .rarity-filter-btn[data-r="legendary"].active{background:rgba(249,199,79,.15);border-color:#f9c74f;color:#f9c74f;}
 .rarity-filter-btn[data-r="mystery"].active{background:linear-gradient(90deg,rgba(100,0,200,.2),rgba(0,150,255,.2));border-color:#9900ff;color:#ff00ff;animation:mysteryGlow .8s ease-in-out infinite alternate;}
 
-
 /* ===== LOADING SCREEN ===== */
 #loading-screen{
-  position:fixed;inset:0;z-index:9999;
+  position:fixed;inset:0;width:100%;height:100%;z-index:9999;
   background:linear-gradient(160deg,#0f0c29,#302b63,#24243e);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   color:#fff;transition:opacity .6s ease;
+  -webkit-transform:translateZ(0);transform:translateZ(0);
 }
 #loading-screen.fade-out{opacity:0;pointer-events:none;}
 #loading-title{
-  font-family:'Boogaloo',cursive;font-size:64px;letter-spacing:3px;
+  font-family:'Boogaloo',cursive;font-size:min(18vw,120px);letter-spacing:4px;
   background:linear-gradient(90deg,#f9c74f,#f3722c,#f9c74f);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-  margin-bottom:6px;
+  margin-bottom:10px;text-align:center;
 }
-#loading-sub{color:#a0a0c0;font-size:14px;margin-bottom:48px;}
+#loading-sub{color:#a0a0c0;font-size:clamp(13px,3.5vw,18px);margin-bottom:60px;text-align:center;padding:0 24px;}
 #loading-bar-wrap{
-  width:280px;height:14px;background:rgba(255,255,255,.1);
+  width:min(80vw,420px);height:16px;background:rgba(255,255,255,.1);
   border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,.15);
-  margin-bottom:14px;
+  margin-bottom:16px;
 }
 #loading-bar-fill{
   height:100%;width:0%;border-radius:10px;
@@ -305,7 +305,7 @@ canvas{display:block;touch-action:none;}
   transition:width .05s linear;
   box-shadow:0 0 12px rgba(249,199,79,.5);
 }
-#loading-pct{font-family:'Boogaloo',cursive;font-size:18px;color:#f9c74f;margin-bottom:36px;}
+#loading-pct{font-family:'Boogaloo',cursive;font-size:clamp(18px,5vw,26px);color:#f9c74f;margin-bottom:40px;}
 #loading-enter{
   display:none;
   padding:16px 52px;border:none;border-radius:50px;
@@ -319,11 +319,11 @@ canvas{display:block;touch-action:none;}
 /* ===== SERVER CHECK OVERLAY (inside loading screen) ===== */
 #server-check-overlay{
   display:none;
-  position:absolute;inset:0;
-  background:rgba(7,5,26,.96);
+  position:fixed;inset:0;
+  background:rgba(7,5,26,.98);
   backdrop-filter:blur(12px);
   flex-direction:column;align-items:center;justify-content:center;
-  z-index:10;
+  z-index:99999;
   animation:scFadeIn .35s ease forwards;
 }
 @keyframes scFadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
@@ -409,9 +409,6 @@ canvas{display:block;touch-action:none;}
 .detail-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:14px;}
 
 .detail-compare-row span{color:#fff;font-weight:700;}
-
-
-
 
 /* Trophy Road */
 #trophy-road{display:none;position:fixed;inset:0;background:linear-gradient(180deg,#0a0a1e,#1a0a2e,#0f0c29);
@@ -768,23 +765,7 @@ canvas{display:block;touch-action:none;}
 #quests-reset-timer{text-align:center;font-size:12px;color:#606080;margin-bottom:16px;}
 
 /* ===== COFFRES À TIMER ===== */
-#panel-chests{display:none;position:fixed;inset:0;background:rgba(10,10,30,.97);color:#fff;z-index:50000;overflow-y:auto;}
-.chest-card{background:linear-gradient(145deg,#1f1f3a,#2a2a4a);border:2px solid rgba(255,255,255,.1);border-radius:18px;padding:18px;margin-bottom:12px;text-align:center;transition:.2s;position:relative;overflow:hidden;}
-.chest-card.ready-chest{border-color:rgba(249,199,79,.5);box-shadow:0 0 20px rgba(249,199,79,.2);}
-.chest-card.locked-chest{opacity:.65;}
-.chest-emoji{font-size:52px;display:block;margin-bottom:8px;line-height:1;}
-.chest-name{font-family:'Boogaloo',cursive;font-size:18px;color:#fff;margin-bottom:4px;}
-.chest-desc{font-size:11px;color:#a0a0c0;margin-bottom:10px;}
-.chest-timer{font-family:'Boogaloo',cursive;font-size:22px;color:#4cc9f0;margin-bottom:8px;}
-.chest-timer.done-timer{color:#a8ff3e;}
-.chest-timer-bar-bg{height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden;margin-bottom:12px;}
-.chest-timer-bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,#f3722c,#f9c74f);transition:width 1s linear;}
-.chest-open-btn{width:100%;padding:10px;border:none;border-radius:12px;font-family:'Boogaloo',cursive;font-size:17px;cursor:pointer;transition:.15s;}
-.chest-open-btn.open-ready{background:linear-gradient(135deg,#f9c74f,#f3722c);color:#1a1a2e;box-shadow:0 4px 16px rgba(249,199,79,.3);}
-.chest-open-btn.open-ready:hover{transform:scale(1.03);}
-.chest-open-btn.open-locked{background:rgba(255,255,255,.07);color:#606080;cursor:not-allowed;}
-.chest-slot-empty{border:2px dashed rgba(255,255,255,.1);border-radius:18px;padding:28px;text-align:center;color:#404060;font-size:13px;margin-bottom:12px;}
-#chests-earn-info{background:rgba(76,201,240,.07);border:1px solid rgba(76,201,240,.2);border-radius:14px;padding:12px 16px;font-size:12px;color:#a0c4ff;margin-bottom:16px;line-height:1.7;}
+
 
 /* ===== SAISON ===== */
 #panel-season{display:none;position:fixed;inset:0;background:rgba(10,10,30,.97);color:#fff;z-index:50000;overflow-y:auto;}
@@ -924,7 +905,6 @@ canvas{display:block;touch-action:none;}
 </div>
 <div id="hamburger-menu">
   <div class="hmenu-item" onclick="closeHamburgerMenu();openQuests()">📋 Quêtes <span id="hmenu-quests-badge" style="background:#a8ff3e;color:#1a1a2e;border-radius:10px;font-size:11px;padding:2px 7px;font-family:'Boogaloo',cursive;margin-left:4px;display:none;">NEW</span></div>
-  <div class="hmenu-item" onclick="closeHamburgerMenu();openChests()">📦 Coffres <span id="hmenu-chests-badge" style="background:#f9c74f;color:#1a1a2e;border-radius:10px;font-size:11px;padding:2px 7px;font-family:'Boogaloo',cursive;margin-left:4px;display:none;">!</span></div>
   <div class="hmenu-item" onclick="closeHamburgerMenu();openSeason()">🏅 Saison</div>
   <div class="hmenu-sep"></div>
   <div class="hmenu-item" onclick="closeHamburgerMenu();openSettings()">⚙️ Paramètres</div>
@@ -946,17 +926,6 @@ canvas{display:block;touch-action:none;}
   </div>
 </div>
 
-<!-- PANNEAU COFFRES -->
-<div id="panel-chests">
-  <div style="max-width:480px;margin:0 auto;padding:28px 20px 40px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-      <h2 style="font-family:'Boogaloo',cursive;font-size:34px;color:#f9c74f;">📦 Coffres</h2>
-      <button onclick="closePanelChests()" style="background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.3);color:#fff;font-size:20px;width:42px;height:42px;border-radius:50%;cursor:pointer;font-weight:bold;">✕</button>
-    </div>
-    <div id="chests-earn-info">🎮 Gagne des coffres en jouant :<br>🥇 Victoire → Coffre 4h &nbsp;|&nbsp; 🥈 Top 3 → Coffre 2h &nbsp;|&nbsp; Partie jouée → Coffre 8h<br>Tu peux stocker jusqu'à <strong>4 coffres</strong> en même temps.</div>
-    <div id="chests-list"></div>
-  </div>
-</div>
 
 <!-- PANNEAU SAISON -->
 <div id="panel-season">
@@ -1093,7 +1062,7 @@ canvas{display:block;touch-action:none;}
   <div id="loading-dots"></div>
 
   <!-- Server check overlay — shown at 50% -->
-  <div id="server-check-overlay" style="display:none;position:absolute;inset:0;background:rgba(7,5,26,.96);backdrop-filter:blur(12px);flex-direction:column;align-items:center;justify-content:center;z-index:10;animation:scFadeIn .35s ease forwards;">
+  <div id="server-check-overlay" style="display:none;position:fixed;inset:0;background:rgba(7,5,26,.98);backdrop-filter:blur(12px);flex-direction:column;align-items:center;justify-content:center;z-index:99999;animation:scFadeIn .35s ease forwards;">
     <!-- Connecting state -->
     <div id="sc-connecting-wrap" style="display:flex;flex-direction:column;align-items:center;">
       <div id="sc-icon" style="font-size:54px;margin-bottom:14px;animation:scPulse 1.6s ease-in-out infinite;">🌐</div>
@@ -1410,7 +1379,6 @@ canvas{display:block;touch-action:none;}
   <button class="btn btn-coll" onclick="closeMapPicker()" style="margin-top:20px;flex-shrink:0;">✖ Fermer</button>
 </div>
 
-
 <!-- TROPHY ROAD -->
 <div id="trophy-road">
   <div id="tr-header">
@@ -1694,8 +1662,6 @@ canvas{display:block;touch-action:none;}
   </div>
 </div>
 
-
-
 <script>
 // ===================== DATA =====================
 // shot: shape of bullet drawn for this hero
@@ -1747,41 +1713,6 @@ const heroes=[
 let hData=heroes.map((_,i)=>({unlocked:i===0,level:1,trophies:0}));
 let selected=0,trophies=0,money=0,pearls=0;
 
-function _saveKey(){
-  try{
-    const raw=localStorage.getItem("brawlhero_account_v1")||sessionStorage.getItem("brawlhero_account_v1");
-    if(raw){const acc=JSON.parse(raw);if(acc&&acc.email)return "brawlSave_"+acc.email.toLowerCase();}
-  }catch(e){}
-  return "brawlheroSave";
-}
-function saveState(){
-  try{
-    const data={hData,selected,trophies,money,pearls};
-    const key=_saveKey();
-    localStorage.setItem(key,JSON.stringify(data));
-    // Sync into account DB
-    try{
-      const raw=localStorage.getItem("brawlhero_account_v1")||sessionStorage.getItem("brawlhero_account_v1");
-      if(raw){const acc=JSON.parse(raw);if(acc&&acc.email){
-        acc.gameState={trophies,money,pearls,hDataRaw:JSON.stringify(hData),selected};
-        localStorage.setItem("brawlhero_account_v1",JSON.stringify(acc));
-        const db=JSON.parse(localStorage.getItem("brawlhero_accounts_db_v1")||"{}");
-        db[acc.email.toLowerCase()]=acc;
-        localStorage.setItem("brawlhero_accounts_db_v1",JSON.stringify(db));
-      }}
-    }catch(e2){}
-  }catch(e){}
-}
-function loadState(){
-  try{
-    const key=_saveKey();
-    const s=localStorage.getItem(key);
-    if(s){const d=JSON.parse(s);
-      hData=heroes.map((_,i)=>({...(d.hData[i]||{unlocked:i===0,level:1,trophies:0}),trophies:d.hData[i]?.trophies||0}));
-      selected=Math.min(d.selected||0,heroes.length-1);trophies=d.trophies||0;money=d.money||0;pearls=d.pearls||0;
-    }
-  }catch(e){}
-}
 loadState();
 
 function updateUI(){
@@ -2362,7 +2293,6 @@ function goMenu(){
   playMenuMusic();
 }
 
-
 // ===================== PROMO CODES =====================
 const PROMO_CODES={};
 const usedCodes=new Set();
@@ -2544,7 +2474,6 @@ function renderTrophyRoad(){
   bottomLabel.textContent="🏆 0 — Début";
   container.appendChild(bottomLabel);
 }
-
 
 // ===================== PEARL SHOP =====================
 function renderPearlShop(){
@@ -5672,28 +5601,10 @@ function pgsGoMenu(){
 }
 function pgsReplay(){
   document.getElementById("postgame-stats").style.display="none";
-  // Show loading screen again, then launch game when it finishes
-  const ls=document.getElementById("loading-screen");
-  ls.classList.remove("fade-out");
-  ls.style.display="flex";
-  ls.style.opacity="1";
-  ls.style.pointerEvents="auto";
-  // The loader will call startGame() via onComplete once bar hits 100%
-  runLoader(function(){
-    // "Entrer" button shown by loader — override it to auto-launch
-    const enterBtn=document.getElementById("loading-enter");
-    if(enterBtn){
-      enterBtn.style.display="none";
-    }
-    // Small delay for visual polish then launch
-    setTimeout(()=>{
-      ls.classList.add("fade-out");
-      setTimeout(()=>{
-        ls.style.display="none";
-        startGame();
-      }, 700);
-    }, 400);
-  });
+  document.getElementById("gameOver").style.display="none";
+  document.getElementById("victoire").style.display="none";
+  document.getElementById("gameWrap").style.display="none";
+  openMatchmaking();
 }
 
 // ===================== TUTORIEL INTERACTIF =====================
@@ -7094,7 +7005,6 @@ function heroVoice(type){
   speak(pool[Math.floor(Math.random() * pool.length)], h.color);
 }
 
-
 let _audioUnlocked=false;
 
 // ===================== SERVER CHECK =====================
@@ -7142,7 +7052,6 @@ function _buildCheckpoints(totalMs, maxProg){
       checkpoints.push({time: t, prog: p, stall: false});
     }
   }
-  // Normalise
   const rawTotal = checkpoints[checkpoints.length-1].time;
   const scale = totalMs / rawTotal;
   return checkpoints.map(c => ({...c, time: c.time * scale}));
@@ -7377,7 +7286,6 @@ const ACCOUNT_KEY = "brawlhero_account_v1";
 const AVATARS = ["😀","🐉","🤖","👻","🐺","🦊","🧟","🦈","🔥","⚡","🎯","💀","🦁","🐯","🦅","🐸","🤠","😈","🧠","🎃","🦄","🐙"];
 let selectedAvatar = AVATARS[0];
 
-// ── Firebase SDK (lazy-loaded) ──────────────────────────────────────
 let _fbApp=null, _fbDb=null, _fbReady=false, _fbInitError=null;
 function _initFirebase(){
   return new Promise((resolve)=>{
@@ -7414,7 +7322,6 @@ function _initFirebase(){
   });
 }
 
-// ── Firestore helpers ───────────────────────────────────────────────
 function _emailKey(email){ return email.toLowerCase().replace(/\./g,"_dot_"); }
 
 // ── Offline queue & network indicator ──────────────────────────────
@@ -7488,7 +7395,7 @@ async function _flushOfflineQueue(){
     try{
       await _fbDb.collection("accounts").doc(_emailKey(acc.email)).set(acc, {merge:true});
     }catch(e){
-      console.warn("flushQueue error",e);
+      
       _offlineQueue.unshift(acc);
       break;
     }
@@ -7523,7 +7430,7 @@ async function fbSaveAccount(acc){
     await _fbDb.collection("accounts").doc(_emailKey(acc.email)).set(acc, {merge:true});
     _showCloudIndicator("☁️ Sauvegardé", "#a8ff3e", 1800);
     return true;
-  }catch(e){ console.warn("fbSave error",e); return false; }
+  }catch(e){ return false; }
 }
 
 // Force-save (bypasses throttle) — used for critical moments (game end, logout)
@@ -7542,7 +7449,7 @@ async function fbSaveAccountForce(acc){
     await _fbDb.collection("accounts").doc(_emailKey(acc.email)).set(acc, {merge:true});
     _showCloudIndicator("☁️ ✅ Sauvegarde cloud", "#a8ff3e", 2000);
     return true;
-  }catch(e){ console.warn("fbSaveForce error",e); return false; }
+  }catch(e){ return false; }
 }
 
 async function fbLoadAccount(email){
@@ -7551,10 +7458,9 @@ async function fbLoadAccount(email){
   try{
     const doc = await _fbDb.collection("accounts").doc(_emailKey(email)).get();
     return doc.exists ? doc.data() : null;
-  }catch(e){ console.warn("fbLoad error",e); return null; }
+  }catch(e){ return null; }
 }
 
-// ── Local cache (fallback offline) ─────────────────────────────────
 function _localSave(acc){
   try{ localStorage.setItem(ACCOUNT_KEY, JSON.stringify(acc)); }catch(e){}
 }
@@ -7563,7 +7469,6 @@ function _localGet(){
 }
 function getSavedAccount(){ return _localGet(); }
 
-// ── Game state capture / restore ────────────────────────────────────
 function captureGameState(){
   return { trophies:trophies||0, money:money||0, pearls:pearls||0, selected:selected||0, hDataRaw:JSON.stringify(hData) };
 }
@@ -7583,7 +7488,6 @@ function restoreGameState(gs){
   }catch(e){}
 }
 
-// ── saveState / loadState (per-account localStorage slot) ───────────
 function _saveKey(){
   try{
     const acc=_localGet();
@@ -7591,7 +7495,6 @@ function _saveKey(){
   }catch(e){}
   return "brawlheroSave";
 }
-// ── Dirty-flag + periodic cloud save ───────────────────────────────
 let _saveStateDirty = false;
 let _periodicCloudTimer = null;
 
@@ -7603,10 +7506,10 @@ function _schedulePeriodicCloudSave(){
     if(acc&&acc.email){
       acc.gameState=captureGameState();
       _localSave(acc);
-      fbSaveAccount(acc); // throttled: max 1 per 30s
+      fbSaveAccount(acc);
       _saveStateDirty = false;
     }
-  }, 30000); // check every 30s
+  }, 30000);
 }
 _schedulePeriodicCloudSave();
 
@@ -7621,7 +7524,6 @@ function saveState(){
       acc.gameState=captureGameState();
       _localSave(acc);
     }
-    // Cloud sync handled by periodic timer (every 30s) or force-save at key moments
   }catch(e){}
 }
 function loadState(){
@@ -7635,7 +7537,6 @@ function loadState(){
 }
 loadState();
 
-// ── UI helpers ──────────────────────────────────────────────────────
 function _setStatus(id, msg, color){
   const el=document.getElementById(id);
   if(el){ el.textContent=msg; el.style.color=color||"#fff"; }
@@ -7644,7 +7545,6 @@ function _loading(id, msg){ _setStatus(id, "⏳ "+msg, "#f9c74f"); }
 function _ok(id, msg){      _setStatus(id, "✅ "+msg, "#a8ff3e"); }
 function _err(id, msg){     _setStatus(id, "❌ "+msg, "#f3722c"); }
 
-// ── Account screen ──────────────────────────────────────────────────
 function showAccountScreen(){
   const saved=getSavedAccount();
   const accEl=document.getElementById("account-screen");
@@ -7787,10 +7687,6 @@ function closeAccountScreen(){
   }, 500);
 }
 
-// ── Auto-save on goMenu ─────────────────────────────────────────────
-// Auto-save game state into account every time goMenu is called (if email account)
-const _origGoMenu = typeof goMenu === "function" ? goMenu : null;
-
 window.addEventListener("load",()=>{
   const origGM=window.goMenu;
   if(origGM){
@@ -7800,13 +7696,12 @@ window.addEventListener("load",()=>{
       if(acc&&acc.email){
         acc.gameState=captureGameState();
         _localSave(acc);
-        fbSaveAccountForce(acc); // force-save on return to menu
+        fbSaveAccountForce(acc);
       }
     };
   }
 });
 
-// ── Logout ──────────────────────────────────────────────────────────
 function startAccBgAnim(){
   const canvas=document.getElementById("acc-bg-canvas");
   if(!canvas) return;
@@ -7824,9 +7719,6 @@ function startAccBgAnim(){
   }
   animAcc();
 }
-
-// Patch goMenu to auto-save account state
-const _origGoMenu2 = window.goMenu;
 
 // ===================== MENU BACKGROUND ANIMATION =====================
 (function initMenuBg(){
@@ -8083,7 +7975,6 @@ function doResetData(){
   location.reload();
 }
 
-
 // ===================== HISTORIQUE =====================
 function openHistory(){
   closeAllPanels();
@@ -8207,7 +8098,7 @@ let fdb = null;
 try{
   firebase.initializeApp(firebaseConfig);
   fdb = firebase.database();
-}catch(e){ console.warn("Firebase init failed", e); }
+}catch(e){  }
 
 const MP_WAIT_MS = 16000; // how long we wait for real players before filling with bots
 let myPid = null;          // unique id for this browser/session
@@ -8345,7 +8236,7 @@ function mpJoinOrCreateRoom(myInfo, status, countEl, pingEl){
     });
   })
   .catch(err=>{
-    console.warn("Firebase matchmaking error", err);
+    
     pingEl.textContent = "📶 Erreur réseau";
     status.textContent = "⚠️ Connexion impossible, mode hors-ligne";
     setTimeout(()=>{ if(!mmCancelled) mpFillRemainingWithBots(1); }, 800);
@@ -8786,8 +8677,6 @@ function mpOnKill(en) {
   addKillfeedEntry(killerName, victimName, killerEmoji, victimEmoji);
 }
 
-
-
 // ===================== CLASSEMENT MONDIAL =====================
 function openLeaderboard(){
   closeAllPanels();
@@ -8877,7 +8766,7 @@ async function renderLeaderboard(){
       }).join('');
     }
   }catch(e){
-    console.warn("Leaderboard load error",e);
+    
     _renderLbOffline(list, status, localTrophies, localHero, localName);
   }
   if(refreshBtn) refreshBtn.disabled=false;
@@ -9041,7 +8930,7 @@ async function renderHeroLeaderboard(heroIdx){
         }).join('')}`;
     }
   }catch(e){
-    console.warn('Hero leaderboard error', e);
+    
     status.textContent = '⚠️ Erreur de chargement';
     list.innerHTML = `<div style="text-align:center;padding:24px;color:#a0a0c0;font-size:14px;">Impossible de charger le classement.</div>`;
   }
@@ -9564,140 +9453,6 @@ function startQuestCountdown(){
   tick(); _questCdInterval=setInterval(tick,1000);
 }
 
-// =====================================================================
-// ===== COFFRES AVEC TIMER ============================================
-// =====================================================================
-const CHEST_TYPES=[
-  {id:'wood', emoji:'📦', name:'Coffre en Bois',   desc:'Récompenses basiques',       timerMs:2*60*60*1000, coins:[15,30],  pearls:[0,2]},
-  {id:'gold', emoji:'🪙',  name:'Coffre en Or',    desc:'Récompenses améliorées',     timerMs:4*60*60*1000, coins:[40,80],  pearls:[2,5]},
-  {id:'mega', emoji:'💎',  name:'Coffre Méga',     desc:'Récompenses exceptionnelles',timerMs:8*60*60*1000, coins:[80,150], pearls:[5,12]},
-];
-const MAX_CHEST_SLOTS=4;
-
-function _getChestSave(){
-  try{return JSON.parse(localStorage.getItem('bh_chests_v1')||'[]');}catch(e){return[];}
-}
-function _setChestSave(d){
-  try{localStorage.setItem('bh_chests_v1',JSON.stringify(d));}catch(e){}
-}
-
-function _addChest(typeId){
-  const slots=_getChestSave();
-  if(slots.length>=MAX_CHEST_SLOTS) return false;
-  const type=CHEST_TYPES.find(t=>t.id===typeId)||CHEST_TYPES[0];
-  slots.push({typeId, name:type.name, emoji:type.emoji, desc:type.desc,
-    timerMs:type.timerMs, startedAt:Date.now(), coins:type.coins, pearls:type.pearls});
-  _setChestSave(slots);
-  _updateChestBadge();
-  return true;
-}
-
-function _updateChestBadge(){
-  const badge=document.getElementById('hmenu-chests-badge');
-  if(!badge) return;
-  const slots=_getChestSave();
-  const hasReady=slots.some(s=>(Date.now()-s.startedAt)>=s.timerMs);
-  badge.style.display=hasReady?'inline':'none';
-}
-
-function openChests(){
-  closeAllPanels();
-  closeHamburgerMenu();
-  document.getElementById('hamburger-btn').style.display='none';
-  document.getElementById('panel-chests').style.display='block';
-  renderChests();
-  if(_chestTimerInterval) clearInterval(_chestTimerInterval);
-  _chestTimerInterval=setInterval(()=>{
-    renderChests();
-    _updateChestBadge();
-  },1000);
-}
-function closePanelChests(){
-  document.getElementById('panel-chests').style.display='none';
-  if(_chestTimerInterval){clearInterval(_chestTimerInterval);_chestTimerInterval=null;}
-  showHamburgerIfMenu();
-}
-let _chestTimerInterval=null;
-
-function renderChests(){
-  const slots=_getChestSave();
-  const list=document.getElementById('chests-list');
-  if(!list) return;
-  let html='';
-  const now=Date.now();
-
-  for(let i=0;i<MAX_CHEST_SLOTS;i++){
-    const ch=slots[i];
-    if(!ch){
-      html+=`<div class="chest-slot-empty">📭 Slot ${i+1} vide<br><span style="font-size:11px">Les coffres s'obtiennent en jouant des parties</span></div>`;
-      continue;
-    }
-    const elapsed=now-ch.startedAt;
-    const done=elapsed>=ch.timerMs;
-    const pct=done?100:Math.min(100,Math.round(elapsed/ch.timerMs*100));
-    let timeStr='';
-    if(!done){
-      const rem=Math.max(0,ch.timerMs-elapsed);
-      const h=Math.floor(rem/3600000); const m=Math.floor((rem%3600000)/60000); const s=Math.floor((rem%60000)/1000);
-      timeStr=h>0?`${h}h ${String(m).padStart(2,'0')}min`:`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-    }
-    html+=`<div class="chest-card${done?' ready-chest':' locked-chest'}">
-      <div class="chest-emoji">${ch.emoji}</div>
-      <div class="chest-name">${ch.name}</div>
-      <div class="chest-desc">${ch.desc}</div>
-      <div class="chest-timer${done?' done-timer':''}">${done?'✅ Prêt à ouvrir !':timeStr}</div>
-      <div class="chest-timer-bar-bg"><div class="chest-timer-bar-fill" style="width:${pct}%"></div></div>
-      <button class="chest-open-btn ${done?'open-ready':'open-locked'}" ${done?`onclick="openChestSlot(${i})"`:'disabled'}>
-        ${done?'📦 Ouvrir':'🔒 En cours...'}
-      </button>
-    </div>`;
-  }
-  list.innerHTML=html;
-}
-
-function openChestSlot(idx){
-  const slots=_getChestSave();
-  const ch=slots[idx];
-  if(!ch) return;
-  const now=Date.now();
-  if(now-ch.startedAt<ch.timerMs) return;
-  // Grant rewards
-  const c=ch.coins[0]+Math.floor(Math.random()*(ch.coins[1]-ch.coins[0]+1));
-  const p=ch.pearls[0]+Math.floor(Math.random()*(ch.pearls[1]-ch.pearls[0]+1));
-  money+=c; if(p>0) pearls+=p;
-  saveState(); updateUI();
-  // Remove chest
-  slots.splice(idx,1);
-  _setChestSave(slots);
-  // Quest: chest opened
-  const qd=_initDailyQuests();
-  for(const q of qd.quests){ if(q.id==='chest1'&&!q.claimed) q.progress=Math.min(q.target,q.progress+1); }
-  _saveQuestProgress(qd); _updateQuestBadge(qd);
-  // Season XP
-  _addSeasonXP(20);
-  renderChests();
-  _updateChestBadge();
-  // Show reward
-  const msg=`📦 Coffre ouvert !\n+${c} 🪙${p>0?' +'+p+' 🔮':''}`;
-  const fb=document.createElement('div');
-  fb.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:linear-gradient(135deg,#1a1a3a,#252550);border:2px solid rgba(249,199,79,.5);color:#fff;font-family:\'Boogaloo\',cursive;font-size:22px;border-radius:20px;padding:20px 36px;z-index:99999;text-align:center;pointer-events:none;animation:popIn .4s ease forwards;';
-  fb.innerHTML=`📦 Coffre ouvert !<br><span style="color:#f9c74f">+${c} 🪙</span>${p>0?` <span style="color:#c8a9ff">+${p} 🔮</span>`:''}`;
-  document.body.appendChild(fb);
-  setTimeout(()=>fb.remove(),2000);
-}
-
-// Award a chest based on rank after a game
-function _awardChestForRank(rank){
-  const slots=_getChestSave();
-  if(slots.length>=MAX_CHEST_SLOTS) return; // full
-  let typeId='wood';
-  if(rank===1) typeId='gold';
-  else if(rank<=3) typeId='wood';
-  else typeId='wood';
-  // For wins award mega occasionally
-  if(rank===1 && Math.random()<0.3) typeId='mega';
-  _addChest(typeId);
-}
 
 // =====================================================================
 // ===== SYSTÈME DE SAISON =============================================
@@ -9840,8 +9595,8 @@ function claimSeasonReward(level){
   // Grant
   if(r.reward.coins){ money+=r.reward.coins; }
   if(r.reward.pearls){ pearls+=r.reward.pearls; }
-  if(r.reward.box){ for(let i=0;i<r.reward.box;i++) _addChest('wood'); }
-  if(r.reward.guaranteed){ _addChest('gold'); }
+  if(r.reward.box){ money+=r.reward.box*50; } // Converti en pièces
+  if(r.reward.guaranteed){ money+=200; } // Converti en pièces
   saveState(); updateUI();
   renderSeason();
   const fb=document.createElement('div');
@@ -9868,9 +9623,7 @@ function claimSeasonReward(level){
     // Season XP: 10 base + 5 per kill + 20 if win
     const sxp=10+kills2*5+(won?20:0)+(rank<=3?10:0);
     _addSeasonXP(sxp);
-    // Chest
-    _awardChestForRank(rank);
-    _updateChestBadge();
+
   };
 })();
 
@@ -9878,7 +9631,6 @@ function claimSeasonReward(level){
 window.addEventListener('load',()=>{
   const qd=_initDailyQuests();
   _updateQuestBadge(qd);
-  _updateChestBadge();
   _initSeason();
 });
 
@@ -9887,9 +9639,7 @@ const _origCloseAllPanels=window.closeAllPanels;
 window.closeAllPanels=function(){
   _origCloseAllPanels&&_origCloseAllPanels();
   const pq=document.getElementById('panel-quests'); if(pq) pq.style.display='none';
-  const pc=document.getElementById('panel-chests'); if(pc) pc.style.display='none';
   const ps=document.getElementById('panel-season'); if(ps) ps.style.display='none';
-  if(typeof _chestTimerInterval!=='undefined'&&_chestTimerInterval){clearInterval(_chestTimerInterval);_chestTimerInterval=null;}
   if(typeof _questCdInterval!=='undefined'&&_questCdInterval){clearInterval(_questCdInterval);_questCdInterval=null;}
 };
 window.addEventListener("load", ()=>{
