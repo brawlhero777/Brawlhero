@@ -993,11 +993,15 @@ canvas{display:block;touch-action:none;}
 <!-- PANNEAU HISTORIQUE -->
 <div id="panel-history" style="display:none;position:fixed;inset:0;background:rgba(10,10,30,.97);color:#fff;z-index:50000;overflow-y:auto;">
   <div style="max-width:480px;margin:0 auto;padding:28px 20px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
       <h2 style="font-family:'Boogaloo',cursive;font-size:36px;color:#4cc9f0;">📜 Historique</h2>
       <button onclick="closeAllPanels()" style="background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.3);color:#fff;font-size:20px;width:42px;height:42px;border-radius:50%;cursor:pointer;font-weight:bold;">✕</button>
     </div>
+    <div id="history-summary" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;"></div>
     <div id="history-list"></div>
+    <div style="text-align:center;margin-top:18px;">
+      <button onclick="clearHistory()" style="background:rgba(243,114,44,.12);border:1px solid rgba(243,114,44,.3);color:#f3722c;font-family:'Boogaloo',cursive;font-size:15px;border-radius:20px;padding:8px 24px;cursor:pointer;">🗑️ Effacer l'historique</button>
+    </div>
   </div>
 </div>
 
@@ -3298,7 +3302,7 @@ function update(dt){
   bullets=bullets.filter(b=>{
     if(b.x<-100||b.x>WORLD_W+100||b.y<-100||b.y>WORLD_H+100) return false;
     if(b.isRicochet&&b.bounces<0) return false;
-    return b.dist<(b.maxDist||620);
+    return b.dist<(b.maxDist||350);
   });
 
   // Enemy AI: Battle Royale — each enemy wants to WIN (kill others, stay alive)
@@ -3489,7 +3493,7 @@ function update(dt){
       if(distToTarget<en.rangeMax+60){
         const bvx=Math.cos(angToTarget)*10,bvy=Math.sin(angToTarget)*10;
         bullets.push({x:en.x,y:en.y,vx:bvx,vy:bvy,life:1,dist:0,fromPlayer:false,
-          fromEnemy:en,dmg:en.dmg*0.55,color:en.color});
+          fromEnemy:en,dmg:en.dmg*0.55,color:en.color,maxDist:en.rangeMax});
         en._lastShot=performance.now();
       }
     }
@@ -5443,6 +5447,20 @@ function showEndScreen(rank){
   saveState();updateUI();
   document.getElementById("gameWrap").style.display="none";
 
+  // ---- Enregistre la partie dans l'historique ----
+  saveMatchToHistory({
+    place:    rank,
+    heroEmoji: heroes[selected].emoji,
+    heroName:  heroes[selected].name,
+    map:       (typeof selectedMap!=='undefined' ? selectedMap.name : '?'),
+    kills:     typeof kills!=='undefined' ? kills : 0,
+    gems:      typeof sessionGems!=='undefined' ? sessionGems : 0,
+    coins:     typeof sessionCoins!=='undefined' ? sessionCoins : 0,
+    duration:  typeof gameTime!=='undefined' ? gameTime : 0,
+    trophies:  delta,
+    total:     totalPlayers,
+  });
+
   // Vibration feedback
   if(rank===1) vibratePattern([80,40,80,40,200]);
   else if(rank<=3) vibratePattern([80,40,120]);
@@ -5455,7 +5473,7 @@ function showEndScreen(rank){
 function winGame(){
   // Player is the last one standing = rank 1
   if(_audioUnlocked) sfxVictory();
-  showEndScreen(1);
+  window.showEndScreen(1);
 }
 function endGame(){
   // Rank = number of alive enemies + 1 (they all beat the player) + 1 (1-indexed)
@@ -5463,7 +5481,7 @@ function endGame(){
   const aliveEnemies=enemies.filter(e=>!e.dead).length;
   const rank=aliveEnemies+1; // player finished behind all remaining enemies
   if(_audioUnlocked) sfxDefeat();
-  showEndScreen(rank);
+  window.showEndScreen(rank);
 }
 
 updateUI();
@@ -5565,7 +5583,28 @@ function pgsGoMenu(){
 }
 function pgsReplay(){
   document.getElementById("postgame-stats").style.display="none";
-  startGame();
+  // Show loading screen again, then launch game when it finishes
+  const ls=document.getElementById("loading-screen");
+  ls.classList.remove("fade-out");
+  ls.style.display="flex";
+  ls.style.opacity="1";
+  ls.style.pointerEvents="auto";
+  // The loader will call startGame() via onComplete once bar hits 100%
+  runLoader(function(){
+    // "Entrer" button shown by loader — override it to auto-launch
+    const enterBtn=document.getElementById("loading-enter");
+    if(enterBtn){
+      enterBtn.style.display="none";
+    }
+    // Small delay for visual polish then launch
+    setTimeout(()=>{
+      ls.classList.add("fade-out");
+      setTimeout(()=>{
+        ls.style.display="none";
+        startGame();
+      }, 700);
+    }, 400);
+  });
 }
 
 // ===================== TUTORIEL INTERACTIF =====================
@@ -6880,6 +6919,7 @@ function closeMapPicker(){
 
 // Expose functions used in HTML onclick attributes
 window.startGame=startGame;
+window.showEndScreen=showEndScreen;
 window.openMapPicker=openMapPicker;
 window.closeMapPicker=closeMapPicker;
 window.openCollection=openCollection;
@@ -6968,11 +7008,17 @@ function heroVoice(type){
 
 let _audioUnlocked=false;
 
-(function runLoader(){
+function runLoader(onComplete){
   const fill=document.getElementById("loading-bar-fill");
   const pct=document.getElementById("loading-pct");
   const enter=document.getElementById("loading-enter");
   const dots=document.getElementById("loading-dots");
+
+  // Reset UI state for replay
+  fill.style.width="0%";
+  pct.textContent="0%";
+  enter.style.display="none";
+  if(dots){dots.style.display="block";dots.textContent="";}
 
   const messages=[
     {at:0,   text:"Initialisation du moteur…"},
@@ -7092,12 +7138,15 @@ let _audioUnlocked=false;
       setTimeout(()=>{
         enter.style.display = "block";
         dots.style.display = "none";
+        if(typeof onComplete==="function") onComplete();
       }, 350);
     }
   }
 
   requestAnimationFrame(tick);
-})();
+}
+// Initial call on page load (shows "Entrer" button)
+runLoader();
 
 function enterGame(){
   _audioUnlocked=true;
@@ -7702,25 +7751,74 @@ function openHistory(){
 }
 function renderHistory(){
   const list=document.getElementById('history-list');
+  const summary=document.getElementById('history-summary');
   const history=JSON.parse(localStorage.getItem('matchHistory')||'[]');
+
   if(!history.length){
+    if(summary) summary.innerHTML='';
     list.innerHTML='<div style="text-align:center;color:#a0a0c0;padding:40px 0;font-size:15px;">Aucune partie jouée pour l\'instant.<br><span style="font-size:32px;display:block;margin-top:12px;">🎮</span></div>';
     return;
   }
-  list.innerHTML=history.slice().reverse().map((m,i)=>{
-    const placeEmoji = m.place===1?'🥇':m.place===2?'🥈':m.place===3?'🥉':`#${m.place}`;
-    const date=new Date(m.date);
-    const dateStr=date.toLocaleDateString('fr-FR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
-    return `<div class="history-row">
-      <div class="history-place">${placeEmoji}</div>
-      <div class="history-info">
-        <div class="hi-hero">${m.heroEmoji||'😀'} ${m.heroName||'Héros'}</div>
-        <div class="hi-meta">🗺️ ${m.map||'?'} &nbsp;•&nbsp; ⚔️ ${m.kills||0} élim. &nbsp;•&nbsp; ${dateStr}</div>
+
+  // — Résumé global —
+  const wins   = history.filter(m=>m.place===1).length;
+  const top3   = history.filter(m=>m.place<=3).length;
+  const totKills = history.reduce((a,m)=>a+(m.kills||0),0);
+  const totTrophies = history.reduce((a,m)=>a+(m.trophies||0),0);
+  const winRate = Math.round(wins/history.length*100);
+  const statPill = (icon,val,label,col)=>
+    `<div style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:8px 14px;text-align:center;flex:1;min-width:70px;">
+       <div style="font-size:18px;line-height:1;">${icon}</div>
+       <div style="font-family:'Boogaloo',cursive;font-size:17px;color:${col};">${val}</div>
+       <div style="font-size:10px;color:#a0a0c0;">${label}</div>
+     </div>`;
+  if(summary) summary.innerHTML =
+    statPill('🎮', history.length, 'parties', '#fff') +
+    statPill('🏆', winRate+'%', 'win rate', winRate>=50?'#a8ff3e':'#f9c74f') +
+    statPill('⚔️', totKills, 'élims', '#f3722c') +
+    statPill('🥇', top3, 'top 3', '#f9c74f');
+
+  // — Liste des parties —
+  list.innerHTML = history.slice().reverse().map((m)=>{
+    const placeEmoji = m.place===1?'🥇':m.place===2?'🥈':m.place===3?'🥉':(m.place<=5?'🏅':'💀');
+    const placeLabel = m.place===1?'1er':m.place===2?'2ème':m.place===3?'3ème':`#${m.place}/${m.total||11}`;
+    const date = new Date(m.date);
+    const dateStr = date.toLocaleDateString('fr-FR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+    const mins = Math.floor((m.duration||0)/60), secs = (m.duration||0)%60;
+    const durStr = mins>0?`${mins}m${secs<10?'0':''}${secs}s`:`${m.duration||0}s`;
+    const trophy = m.trophies||0;
+    const trophyStr = trophy>0
+      ? `<span style="color:#a8ff3e">+${trophy}🏆</span>`
+      : trophy<0
+        ? `<span style="color:#ff6b6b">${trophy}🏆</span>`
+        : `<span style="color:#aaa">±0🏆</span>`;
+    const bgColor = m.place===1
+      ? 'rgba(249,199,79,.07)'
+      : m.place<=3?'rgba(180,180,200,.04)':'transparent';
+    const borderColor = m.place===1
+      ? 'rgba(249,199,79,.4)'
+      : m.place<=3?'rgba(180,180,200,.2)':'rgba(255,255,255,.08)';
+    return `<div class="history-row" style="background:${bgColor};border-color:${borderColor};">
+      <div style="min-width:46px;text-align:center;">
+        <div style="font-size:28px;line-height:1;">${placeEmoji}</div>
+        <div style="font-size:10px;color:#a0a0c0;margin-top:2px;font-family:'Boogaloo',cursive;">${placeLabel}</div>
       </div>
-      <div class="history-score">🏆 ${m.trophies>=0?(m.trophies>0?'+':'')+m.trophies:'?'}</div>
+      <div class="history-info" style="flex:1;">
+        <div class="hi-hero" style="font-size:14px;">${m.heroEmoji||'😀'} <strong>${m.heroName||'Héros'}</strong></div>
+        <div class="hi-meta">🗺️ ${m.map||'?'} &nbsp;•&nbsp; ⚔️ ${m.kills||0} élim. &nbsp;•&nbsp; 💎 ${m.gems||0} &nbsp;•&nbsp; ⏱️ ${durStr}</div>
+        <div class="hi-meta" style="margin-top:3px;color:#666;font-size:10px;">${dateStr}</div>
+      </div>
+      <div style="text-align:right;font-family:'Boogaloo',cursive;font-size:15px;white-space:nowrap;">${trophyStr}</div>
     </div>`;
   }).join('');
 }
+
+function clearHistory(){
+  if(!confirm('Effacer tout l\'historique ?')) return;
+  localStorage.removeItem('matchHistory');
+  renderHistory();
+}
+
 // Appelé à la fin de chaque partie pour enregistrer
 function saveMatchToHistory(data){
   const history=JSON.parse(localStorage.getItem('matchHistory')||'[]');
@@ -9453,6 +9551,8 @@ window.closeAllPanels=function(){
 };
 window.addEventListener("load", ()=>{
   const menu = document.getElementById("menu");
+  // Observe menu visibility changes to keep the profile button in sync
+  const _menuObserver = new MutationObserver(()=>{ if(typeof updateProfileBtn==='function') updateProfileBtn(); });
   if(menu) _menuObserver.observe(menu, {attributes:true, attributeFilter:["style"]});
   updateProfileBtn();
   // Appliquer les paramètres sauvegardés dès le démarrage
