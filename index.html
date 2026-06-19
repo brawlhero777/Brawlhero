@@ -7880,7 +7880,14 @@ async function acceptFriendRequest(reqId, reqData){
   if(!ok) return false;
   try{
     await _fbDb.collection("friendRequests").doc(reqId).set({status:"accepted"}, {merge:true});
-    // Ajoute chacun à la liste d'amis confirmés de l'autre (cache local pour affichage rapide)
+    // Source de vérité partagée : un seul document d'amitié, lisible par les deux comptes
+    const pairId = [reqData.fromCode.replace(/^#/,""), reqData.toCode.replace(/^#/,"")].sort().join("_");
+    await _fbDb.collection("friendships").doc(pairId).set({
+      codeA: reqData.fromCode, nameA: reqData.fromName,
+      codeB: reqData.toCode,   nameB: reqData.toName,
+      createdAt: Date.now()
+    });
+    // Met à jour le cache local de celui qui accepte (affichage immédiat)
     const myList=_getFriends();
     if(!myList.some(f=>f.code===reqData.fromCode)){
       myList.push({code:reqData.fromCode, name:reqData.fromName});
@@ -7889,6 +7896,21 @@ async function acceptFriendRequest(reqId, reqData){
     return true;
   }catch(e){ return false; }
 }
+// Récupère la liste d'amis à jour depuis Firestore (source de vérité partagée par les deux comptes)
+async function syncFriendsFromFirestore(myCode){
+  const ok = await _initFirebase();
+  if(!ok) return;
+  try{
+    const [snapA, snapB] = await Promise.all([
+      _fbDb.collection("friendships").where("codeA","==",myCode).get(),
+      _fbDb.collection("friendships").where("codeB","==",myCode).get()
+    ]);
+    const list=[];
+    snapA.docs.forEach(d=>{ const f=d.data(); list.push({code:f.codeB, name:f.nameB}); });
+    snapB.docs.forEach(d=>{ const f=d.data(); list.push({code:f.codeA, name:f.nameA}); });
+    _setFriends(list);
+  }catch(e){}
+}
 async function declineFriendRequest(reqId){
   const ok = await _initFirebase();
   if(!ok) return false;
@@ -7896,25 +7918,6 @@ async function declineFriendRequest(reqId){
     await _fbDb.collection("friendRequests").doc(reqId).set({status:"declined"}, {merge:true});
     return true;
   }catch(e){ return false; }
-}
-// Vérifie si une de NOS demandes envoyées a été acceptée entre-temps, pour mettre à jour notre liste locale
-async function syncAcceptedOutgoingRequests(myCode){
-  const ok = await _initFirebase();
-  if(!ok) return;
-  try{
-    const snap = await _fbDb.collection("friendRequests")
-      .where("fromCode","==",myCode).where("status","==","accepted").get();
-    const list=_getFriends();
-    let changed=false;
-    snap.docs.forEach(d=>{
-      const data=d.data();
-      if(!list.some(f=>f.code===data.toCode)){
-        list.push({code:data.toCode, name:data.toName});
-        changed=true;
-      }
-    });
-    if(changed) _setFriends(list);
-  }catch(e){}
 }
 
 function captureGameState(){
@@ -9852,21 +9855,66 @@ function _getFriends(){
 function _setFriends(list){
   try{ localStorage.setItem('bh_friends_v1', JSON.stringify(list)); }catch(e){}
 }
+let _friendsPollInterval=null;
 function openFriends(){
   closeAllPanels();
   closeHamburgerMenu();
   document.getElementById('hamburger-btn').style.display='none';
   document.getElementById('panel-friends').style.display='block';
   renderFriends();
+  // Tant que le panneau est ouvert, on revérifie périodiquement : si l'autre
+  // personne vient d'accepter notre demande, on devient amis des DEUX côtés
+  // sans avoir besoin de fermer/rouvrir le panneau.
+  if(_friendsPollInterval) clearInterval(_friendsPollInterval);
+  _friendsPollInterval=setInterval(renderFriends, 8000);
 }
 function closePanelFriends(){
   document.getElementById('panel-friends').style.display='none';
   showHamburgerIfMenu();
+  if(_friendsPollInterval){ clearInterval(_friendsPollInterval); _friendsPollInterval=null; }
 }
-function renderFriends(){
-  const list=_getFriends();
+// Garde une trace des demandes déjà notifiées comme "acceptées" pour ne pas
+// afficher la même notif en boucle.
+function _getSeenAccepted(){
+  try{ return JSON.parse(localStorage.getItem('bh_seen_accepted_v1')||'[]'); }catch(e){ return []; }
+}
+function _setSeenAccepted(list){
+  try{ localStorage.setItem('bh_seen_accepted_v1', JSON.stringify(list)); }catch(e){}
+}
+// Vérifie les demandes QUE J'AI ENVOYÉES et qui viennent d'être acceptées
+// par l'autre joueur, afin que l'expéditeur de la demande devienne lui aussi
+// ami (et soit prévenu), pas seulement la personne qui a cliqué "Accepter".
+async function checkSentRequestsAccepted(myCode){
+  const ok = await _initFirebase();
+  if(!ok) return;
+  try{
+    const snap = await _fbDb.collection("friendRequests")
+      .where("fromCode","==",myCode).where("status","==","accepted").get();
+    const seen=_getSeenAccepted();
+    const fresh=[];
+    snap.docs.forEach(d=>{ if(!seen.includes(d.id)){ fresh.push(d.data()); seen.push(d.id); } });
+    if(fresh.length){
+      _setSeenAccepted(seen);
+      fresh.forEach(r=>{
+        const fb=document.createElement('div');
+        fb.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:linear-gradient(135deg,#1a1a3a,#252550);border:2px solid rgba(168,255,62,.5);color:#fff;font-family:\'Boogaloo\',cursive;font-size:18px;border-radius:20px;padding:16px 28px;z-index:99999;text-align:center;pointer-events:none;animation:popIn .4s ease forwards;max-width:80vw;';
+        fb.innerHTML=`✅ ${r.toName} a accepté ta demande d'ami !`;
+        document.body.appendChild(fb);
+        setTimeout(()=>fb.remove(),2500);
+      });
+    }
+  }catch(e){}
+}
+async function renderFriends(){
   const wrap=document.getElementById('friends-list');
-  const reqWrap=document.getElementById('friend-requests-list');
+
+  // Synchronise la liste depuis Firestore (source de vérité partagée) avant d'afficher
+  const myCode = await ensureFriendCode();
+  await syncFriendsFromFirestore(myCode);
+  // Si une demande QUE J'AI ENVOYÉE vient d'être acceptée par l'autre joueur,
+  // on devient amis et on le prévient (les deux côtés sont alors bien amis).
+  await checkSentRequestsAccepted(myCode);
+  const list=_getFriends();
 
   if(!list.length){
     wrap.innerHTML='<div style="text-align:center;color:#606080;padding:32px 0;font-size:14px;">Aucun ami pour le moment<br><span style="font-size:12px;">Ajoute un code ami ci-dessus !</span></div>';
@@ -9884,17 +9932,15 @@ function renderFriends(){
   }
 
   // Demandes reçues en attente
-  refreshIncomingFriendRequests();
+  refreshIncomingFriendRequests(myCode);
 }
 
-async function refreshIncomingFriendRequests(){
+async function refreshIncomingFriendRequests(myCode){
   const reqWrap=document.getElementById('friend-requests-list');
   const reqSection=document.getElementById('friend-requests-section');
   if(!reqWrap||!reqSection) return;
-  const myCode = await ensureFriendCode();
+  if(!myCode) myCode = await ensureFriendCode();
   const requests = await getIncomingFriendRequests(myCode);
-  // Synchronise aussi les demandes qu'on a envoyées et qui ont été acceptées
-  await syncAcceptedOutgoingRequests(myCode);
 
   if(!requests.length){
     reqSection.style.display='none';
@@ -9962,11 +10008,22 @@ async function addFriend(){
   setTimeout(()=>{fb.textContent='';},2500);
   renderFriends();
 }
-function removeFriend(i){
+async function removeFriend(i){
   const list=_getFriends();
+  const removed=list[i];
   list.splice(i,1);
   _setFriends(list);
   renderFriends();
+  if(removed && removed.code){
+    const myCode = await ensureFriendCode();
+    const ok = await _initFirebase();
+    if(ok){
+      try{
+        const pairId = [myCode.replace(/^#/,""), removed.code.replace(/^#/,"")].sort().join("_");
+        await _fbDb.collection("friendships").doc(pairId).delete();
+      }catch(e){}
+    }
+  }
 }
 
 function renderQuests(){
@@ -10241,6 +10298,7 @@ window.closeAllPanels=function(){
   const pq=document.getElementById('panel-quests'); if(pq) pq.style.display='none';
   const ps=document.getElementById('panel-season'); if(ps) ps.style.display='none';
   if(typeof _questCdInterval!=='undefined'&&_questCdInterval){clearInterval(_questCdInterval);_questCdInterval=null;}
+  if(typeof _friendsPollInterval!=='undefined'&&_friendsPollInterval){clearInterval(_friendsPollInterval);_friendsPollInterval=null;}
 };
 window.addEventListener("load", ()=>{
   const menu = document.getElementById("menu");
