@@ -3119,7 +3119,15 @@ function initGame(){
   schedulePowerup();
   kills=0;totalEnemies=10;
   playerSpawnTime=performance.now();
-  gameTime=0;lastShoot=0;sessionCoins=0;sessionGems=0;
+  // Temps de jeu : en multijoueur réel, dérivé du timestamp absolu partagé
+  // (matchStartAt, écrit par le host dans Firebase) plutôt que démarré à 0
+  // localement — sinon chaque téléphone démarre son propre chrono au moment
+  // où IL a fini sa connexion Firebase, ce qui causait jusqu'à plusieurs
+  // secondes d'écart entre appareils (ex: 35s vs 38s au même instant réel).
+  gameTime = (typeof window._sharedMatchStartAt==="number")
+    ? Math.max(0, Math.round((Date.now()-window._sharedMatchStartAt)/1000))
+    : 0;
+  lastShoot=0;sessionCoins=0;sessionGems=0;
   playerLastHurt=performance.now();playerLastShot=performance.now();playerRegenTick=0;
   gameRunning=true;
   zoneActive=false;zoneRadius=0;zoneShrinking=false;zoneStartTime=0;
@@ -3215,10 +3223,19 @@ function initGame(){
   clearInterval(timerInterval);
   timerInterval=setInterval(()=>{
     if(!gameRunning)return;
-    gameTime++;
+    const _prevGameTime=gameTime;
+    // En multijoueur réel, on se RE-CALE sur le timestamp absolu partagé à
+    // chaque tick au lieu de simplement incrémenter localement : ça empêche
+    // toute dérive (tab en arrière-plan, setInterval ralenti, etc.) de
+    // s'accumuler entre les appareils au fil de la partie.
+    gameTime = (typeof window._sharedMatchStartAt==="number")
+      ? Math.max(_prevGameTime, Math.round((Date.now()-window._sharedMatchStartAt)/1000))
+      : gameTime+1;
     document.getElementById("timer").textContent=gameTime;
-    // Warn 10s before zone
-    if(gameTime===35){
+    // Warn 10s before zone — utilise un seuil franchi plutôt qu'une égalité
+    // stricte pour rester fiable même si gameTime saute de plusieurs secondes
+    // d'un coup (recalage après un tick manqué).
+    if(_prevGameTime<35 && gameTime>=35){
       const zw=document.getElementById("zone-warn");
       zw.innerHTML="⚠️ Zone Poison dans 10s !";
       zw.style.opacity="1";
@@ -8815,8 +8832,16 @@ function mpFinalizeMatch(status, countEl){
   if(playerSlot===0 && mpRoomRef){
     const _spawnSeed = Date.now()%86400000;
     window._sharedSpawnSeed = _spawnSeed;
+    // Timestamp absolu de début de partie, partagé : permet à tous les
+    // appareils de calculer le MÊME temps écoulé (Date.now()-matchStartAt)
+    // au lieu de démarrer chacun leur propre chrono local au moment où ils
+    // ont fini leur connexion Firebase (ce qui causait un décalage de
+    // plusieurs secondes entre les téléphones, ex: 35s vs 38s).
+    const _matchStartAt = Date.now() + 900; // +900ms = délai avant launchFromMatchmaking ci-dessous
+    window._sharedMatchStartAt = _matchStartAt;
     mpRoomRef.child("status").set("started");
     mpRoomRef.child("spawnSeed").set(_spawnSeed);
+    mpRoomRef.child("matchStartAt").set(_matchStartAt);
     status.textContent = "✅ Partie trouvée !";
     countEl.textContent = "11 / 11";
     mpFillRemainingWithBots(1 + realCount);
@@ -8828,10 +8853,15 @@ function mpFinalizeMatch(status, countEl){
       if(typeof seed!=='number') return; // pas encore écrite
       mpRoomRef.child("spawnSeed").off("value");
       window._sharedSpawnSeed = seed;
-      status.textContent = "✅ Partie trouvée !";
-      countEl.textContent = "11 / 11";
-      mpFillRemainingWithBots(1 + realCount);
-      setTimeout(()=>{ if(!mmCancelled) launchFromMatchmaking(); }, 900);
+      // Lit le timestamp absolu de départ écrit par le host (cf branche ci-dessus)
+      mpRoomRef.child("matchStartAt").once("value", startSnap=>{
+        const startAt = startSnap.val();
+        if(typeof startAt==="number") window._sharedMatchStartAt = startAt;
+        status.textContent = "✅ Partie trouvée !";
+        countEl.textContent = "11 / 11";
+        mpFillRemainingWithBots(1 + realCount);
+        setTimeout(()=>{ if(!mmCancelled) launchFromMatchmaking(); }, 900);
+      });
     });
   } else {
     // Offline fallback
@@ -9249,11 +9279,17 @@ function updateMmBar(joined, total) {
 function launchFromMatchmaking() {
   document.getElementById("matchmaking").style.display = "none";
   window._fakePlayerNames = fakePlayers.slice(1).map((p,i) => p);
-  // Récupérer la seed partagée depuis Firebase avant de lancer
+  // Récupérer la seed + le timestamp de départ partagés depuis Firebase avant de lancer
   if(fdb && mpRoomId){
-    fdb.ref("lobby").child(mpRoomId).child("spawnSeed").once("value", snap=>{
-      const seed=snap.val();
+    const _roomRef = fdb.ref("lobby").child(mpRoomId);
+    Promise.all([
+      _roomRef.child("spawnSeed").once("value"),
+      _roomRef.child("matchStartAt").once("value")
+    ]).then(([seedSnap, startSnap])=>{
+      const seed=seedSnap.val();
       if(typeof seed==="number") window._sharedSpawnSeed=seed;
+      const startAt=startSnap.val();
+      if(typeof startAt==="number") window._sharedMatchStartAt=startAt;
       startGame();
     }).catch(()=>{ startGame(); });
   } else {
