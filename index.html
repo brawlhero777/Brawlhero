@@ -3187,6 +3187,7 @@ function initGame(){
   window._mpBotsShared = _mpBotsShared;
   const _amBotHost = _mpBotsShared ? (playerSlot===0) : true; // host simule l'IA des bots
   window._amBotHost = _amBotHost;
+  console.log("[INIT] _mpBotsShared="+_mpBotsShared+" _amBotHost="+_amBotHost+" playerSlot="+playerSlot+" fakePlayersReal="+(typeof fakePlayers!=="undefined" ? fakePlayers.filter(p=>p&&p.isReal).length : "N/A"));
   // IMPORTANT (fix "trop de joueurs") : il y a exactement 11 places au total
   // (1 joueur local + 10 autres). Chacune des 10 places restantes est occupée
   // SOIT par un vrai joueur distant SOIT par un bot IA, jamais les deux. On
@@ -9163,11 +9164,14 @@ function mpStartBotSync(){
     // ---- NON-HOST : écoute l'état authoritatif de chaque bot publié par le host.
     mpBotsRef.on("value", snap=>{
       const val = snap.val() || {};
+      const deadCount = Object.values(val).filter(s=>s&&s.dead).length;
+      const aliveCount = Object.values(val).filter(s=>s&&!s.dead).length;
+      console.log("[NON-HOST] Firebase bots snap: alive="+aliveCount+" dead="+deadCount+" enemies.len="+enemies.length);
       for(const slotKey in val){
         const st = val[slotKey];
         const slot = parseInt(slotKey, 10);
         const en = enemies.find(e=>e._botSlot===slot);
-        if(!en) continue;
+        if(!en){ console.log("[NON-HOST] slot "+slot+" not found in enemies (dead=" + st.dead+")"); continue; }
         if(typeof st.x==="number") en._targetX = st.x;
         if(typeof st.y==="number") en._targetY = st.y;
         if(typeof st.hp==="number") en.hp = Math.max(0, Math.min(en.maxHp, st.hp));
