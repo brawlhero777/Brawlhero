@@ -8920,6 +8920,8 @@ function mpLeaveRoom(){
       mpPlayersRef.child(mpGetPid()).remove();
     }
   }catch(e){}
+  // Nettoyage killfeed
+  try{ if(mpRoomRef) mpRoomRef.child("killfeed").off(); }catch(e){}
   mpRoomRef=null;mpPlayersRef=null;mpHitsRef=null;mpRoomId=null;
   mpBotsRef=null;mpBotHitsRef=null;
   mpRemotePlayers={};mpRemoteEnemies={};mpFinalized=false;mpInGame=false;
@@ -9028,6 +9030,18 @@ function mpStartGameSync(){
     });
   }
 
+  // Écoute le killfeed partagé — tous les clients affichent les kills de tout le monde
+  const kfRef = mpRoomRef.child("killfeed");
+  kfRef.on("child_added", snap=>{
+    if(!gameRunning) return;
+    const kf = snap.val();
+    if(!kf) return;
+    // Ne pas re-afficher un kill qu'on a nous-mêmes pushé (évite doublon)
+    if(kf.from === mpGetPid()) return;
+    if(typeof addKillfeedEntry==="function")
+      addKillfeedEntry(kf.killerName, kf.victimName, kf.killerEmoji, kf.victimEmoji);
+  });
+
   // Listen for hits other players send us — nœud de partie partagé (cf mpSendHit
   // ci-dessous pour l'explication : un nœud privé par joueur était bloqué par les
   // règles de sécurité Firebase, donc aucun dégât n'arrivait jamais aux vrais
@@ -9076,11 +9090,12 @@ function mpSendHit(pid, dmg){
 // Called every frame from update(): interpolate remote positions, push our own state.
 function mpSyncTick(dt){
   if(!mpInGame) return;
-  // Smoothly move remote enemies toward their latest known position
+  // Interpolation douce : on converge vers la cible en ~12 frames (au lieu de ~4)
+  // pour éviter les téléportations visibles quand Firebase arrive en retard.
   for(const pid in mpRemoteEnemies){
     const en = mpRemoteEnemies[pid];
     if(en.dead) continue;
-    const lerp = Math.min(1, (dt/16)*0.25);
+    const lerp = Math.min(1, (dt/16)*0.08);
     en.x += (en._targetX-en.x)*lerp;
     en.y += (en._targetY-en.y)*lerp;
   }
@@ -9228,11 +9243,11 @@ function mpBotSyncTick(dt){
     }
     try{ mpBotsRef.update(updates); }catch(e){}
   } else {
-    // Interpolation douce vers la dernière position connue, comme pour les vrais joueurs distants
+    // Interpolation douce vers la dernière position connue
     for(const en of enemies){
       if(typeof en._botSlot!=="number" || en.dead) continue;
       if(typeof en._targetX!=="number") continue;
-      const lerp = Math.min(1, (dt/16)*0.25);
+      const lerp = Math.min(1, (dt/16)*0.08);
       en.x += (en._targetX-en.x)*lerp;
       en.y += (en._targetY-en.y)*lerp;
     }
@@ -9427,25 +9442,43 @@ function mpOnKill(en) {
   const victimName = en._fakeName || en.emoji;
   const victimEmoji = en.emoji;
   let killerName = "Toi", killerEmoji = heroes[selected]?.emoji || "😀";
+  let killerNameForBroadcast = (typeof currentAccountName==="function" ? currentAccountName() : null) || "Toi";
 
   if(en._lastHitBy === "player"){
-    // Le joueur a fait le dernier tir — c'est lui le tueur
     killerName = "Toi";
     killerEmoji = heroes[selected]?.emoji || "😀";
+    killerNameForBroadcast = (typeof currentAccountName==="function" ? currentAccountName() : null) || "Toi";
   } else if(en._lastHitBy === "zone"){
     killerName = "Zone ☠";
     killerEmoji = "☣️";
+    killerNameForBroadcast = "Zone ☠";
   } else if(en._lastHitBy && typeof en._lastHitBy === "object" && !en._lastHitBy.dead){
-    // Un ennemi a fait le dernier tir
     const killer = en._lastHitBy;
     killerName = killer._fakeName || killer.emoji;
     killerEmoji = killer.emoji;
+    killerNameForBroadcast = killerName;
   } else {
-    // Pas d'info (contact, cause inconnue…)
     killerName = "Zone ☠";
     killerEmoji = "☣️";
+    killerNameForBroadcast = "Zone ☠";
   }
+
+  // Affichage local
   addKillfeedEntry(killerName, victimName, killerEmoji, victimEmoji);
+
+  // Broadcast vers Firebase pour que tous les autres clients voient le kill
+  if(fdb && mpRoomRef && mpInGame){
+    try{
+      mpRoomRef.child("killfeed").push({
+        killerName: killerNameForBroadcast,
+        victimName,
+        killerEmoji,
+        victimEmoji,
+        from: mpGetPid(),
+        t: Date.now()
+      });
+    }catch(e){}
+  }
 }
 
 // ===================== CLASSEMENT MONDIAL =====================
