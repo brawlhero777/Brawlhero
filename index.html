@@ -945,20 +945,8 @@ canvas{display:block;touch-action:none;}
   <div class="hmenu-item" id="hmenu-account-btn" onclick="closeHamburgerMenu();openAccountPanel()">🔑 Connexion / Compte</div>
 </div>
 
-<!-- PANNEAU QUÊTES -->
-<div id="panel-quests">
-  <div style="max-width:480px;margin:0 auto;padding:28px 20px 40px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-      <h2 style="font-family:'Boogaloo',cursive;font-size:34px;color:#a8ff3e;">📋 Quêtes du Jour</h2>
-      <button onclick="closePanelQuests()" style="background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.3);color:#fff;font-size:20px;width:42px;height:42px;border-radius:50%;cursor:pointer;font-weight:bold;">✕</button>
-    </div>
-    <div id="quests-reset-timer">Réinitialisation dans : <strong id="quests-countdown">--:--:--</strong></div>
-    <div id="quests-list"></div>
-  </div>
-</div>
 
-
-<!-- PANNEAU SAISON -->
+<!-- PANNEAU SAISON (avec Quêtes intégrées) -->
 <div id="panel-season">
   <div style="max-width:480px;margin:0 auto;padding:28px 20px 40px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
@@ -972,7 +960,35 @@ canvas{display:block;touch-action:none;}
       <div id="season-xp-bar-bg"><div id="season-xp-bar-fill" style="width:0%"></div></div>
       <div id="season-xp-row"><span>Niveau <span id="season-lvl-lo">1</span></span><span>Niveau <span id="season-lvl-hi">2</span></span></div>
     </div>
+
+    <!-- Quêtes du jour : seul moyen de gagner de l'XP de saison -->
+    <div style="margin:22px 0 10px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+        <h3 style="font-family:'Boogaloo',cursive;font-size:22px;color:#a8ff3e;margin:0;">📋 Quêtes du Jour</h3>
+      </div>
+      <div style="font-size:11px;color:#a0a0c0;margin-bottom:8px;">Termine les quêtes pour gagner de l'XP et monter de niveau dans le pass !</div>
+      <div id="quests-reset-timer">Réinitialisation dans : <strong id="quests-countdown">--:--:--</strong></div>
+      <div id="quests-list"></div>
+    </div>
+
     <div id="season-track"></div>
+  </div>
+</div>
+
+<!-- PANNEAU AMIS -->
+<div id="panel-friends" style="display:none;position:fixed;inset:0;background:rgba(10,10,30,.97);color:#fff;z-index:50000;overflow-y:auto;">
+  <div style="max-width:480px;margin:0 auto;padding:28px 20px 40px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <h2 style="font-family:'Boogaloo',cursive;font-size:34px;color:#4cc9f0;">👥 Amis</h2>
+      <button onclick="closePanelFriends()" style="background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.3);color:#fff;font-size:20px;width:42px;height:42px;border-radius:50%;cursor:pointer;font-weight:bold;">✕</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:18px;">
+      <input id="friend-add-input" type="text" placeholder="#CODEAMI" maxlength="7" style="flex:1;padding:12px 14px;border-radius:14px;border:1.5px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#fff;font-family:'Boogaloo',cursive;font-size:15px;letter-spacing:1px;text-transform:uppercase;">
+      <button onclick="addFriend()" style="border:none;background:linear-gradient(135deg,#4cc9f0,#4361ee);color:#fff;font-family:'Boogaloo',cursive;font-size:15px;border-radius:14px;padding:0 18px;cursor:pointer;">Ajouter</button>
+    </div>
+    <div style="font-size:11px;color:#606080;text-align:center;margin-top:-12px;margin-bottom:14px;">Demande le code ami de la personne dans son profil 👤</div>
+    <div id="friends-feedback" style="font-size:12px;color:#a8ff3e;text-align:center;margin-bottom:10px;min-height:14px;"></div>
+    <div id="friends-list"></div>
   </div>
 </div>
 
@@ -1255,10 +1271,10 @@ canvas{display:block;touch-action:none;}
       <span id="map-name-label">Herbe</span>
     </button>
 
-    <!-- Quêtes -->
-    <button class="btn-side" style="position:relative;" onclick="openQuests()">
-      <span class="side-icon">📋</span>
-      Quêtes
+    <!-- Amis -->
+    <button class="btn-side" style="position:relative;" onclick="openFriends()">
+      <span class="side-icon">👥</span>
+      Amis
     </button>
 
     <!-- Collection -->
@@ -1283,6 +1299,11 @@ canvas{display:block;touch-action:none;}
       <div id="prof-avatar-display" style="font-size:80px;line-height:1;filter:drop-shadow(0 4px 20px rgba(249,199,79,.4));"></div>
       <div id="prof-name-display" style="font-family:'Boogaloo',cursive;font-size:26px;margin-top:8px;"></div>
       <div id="prof-email-display" style="font-size:12px;color:#606080;margin-top:2px;"></div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;">
+        <div id="prof-friendcode-display" style="font-family:'Boogaloo',cursive;font-size:16px;color:#4cc9f0;background:rgba(76,201,240,.12);border:1.5px solid rgba(76,201,240,.35);border-radius:14px;padding:6px 16px;letter-spacing:1px;">#------</div>
+        <button onclick="copyFriendCode()" style="border:none;background:rgba(255,255,255,.1);color:#fff;font-size:13px;width:32px;height:32px;border-radius:10px;cursor:pointer;">📋</button>
+      </div>
+      <div style="font-size:10px;color:#606080;margin-top:4px;">Ton code ami — partage-le pour qu'on t'ajoute !</div>
     </div>
 
     <!-- Section pseudo -->
@@ -7749,6 +7770,66 @@ function _localGet(){
 }
 function getSavedAccount(){ return _localGet(); }
 
+// ===== CODE AMI UNIQUE =====
+const FRIEND_CODE_KEY = "brawlhero_friend_code_v1";
+function _genFriendCode(){
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sans I/O/0/1 pour éviter confusion
+  let code = "";
+  for(let i=0;i<6;i++) code += chars[Math.floor(Math.random()*chars.length)];
+  return "#"+code;
+}
+// Récupère (ou crée) le code ami local — utilisé en fallback hors-ligne
+function _getLocalFriendCode(){
+  let code = localStorage.getItem(FRIEND_CODE_KEY);
+  if(!code){
+    code = _genFriendCode();
+    localStorage.setItem(FRIEND_CODE_KEY, code);
+  }
+  return code;
+}
+// Garantit que le compte (connecté) a un code ami unique enregistré dans Firestore.
+// Si déjà présent en local mais pas encore poussé sur le cloud, on le synchronise.
+async function ensureFriendCode(){
+  const local = _getLocalFriendCode();
+  const acc = getSavedAccount();
+  if(!acc || !acc.email){ return local; } // pas connecté : code local uniquement
+  const ok = await _initFirebase();
+  if(!ok) return local;
+  try{
+    const key = _emailKey(acc.email);
+    const accDoc = await _fbDb.collection("accounts").doc(key).get();
+    const existing = accDoc.exists ? accDoc.data().friendCode : null;
+    if(existing){
+      localStorage.setItem(FRIEND_CODE_KEY, existing);
+      return existing;
+    }
+    // Génère un code, vérifie qu'il est unique dans le registre, puis l'enregistre
+    let code = local;
+    let attempts = 0;
+    while(attempts < 5){
+      const dup = await _fbDb.collection("friendCodes").doc(code.slice(1)).get();
+      if(!dup.exists) break;
+      code = _genFriendCode();
+      attempts++;
+    }
+    await _fbDb.collection("friendCodes").doc(code.slice(1)).set({email:acc.email, name:acc.username||"Joueur"});
+    await _fbDb.collection("accounts").doc(key).set({friendCode:code}, {merge:true});
+    localStorage.setItem(FRIEND_CODE_KEY, code);
+    return code;
+  }catch(e){ return local; }
+}
+// Recherche un joueur par code ami via le registre Firestore
+async function lookupFriendByCode(code){
+  const clean = code.replace(/^#/,"").trim().toUpperCase();
+  if(!clean) return null;
+  const ok = await _initFirebase();
+  if(!ok) return null;
+  try{
+    const doc = await _fbDb.collection("friendCodes").doc(clean).get();
+    return doc.exists ? doc.data() : null;
+  }catch(e){ return null; }
+}
+
 function captureGameState(){
   return { trophies:trophies||0, money:money||0, pearls:pearls||0, selected:selected||0, hDataRaw:JSON.stringify(hData) };
 }
@@ -8175,6 +8256,8 @@ function closeAllPanels(){
   document.getElementById('panel-settings').style.display='none';
   document.getElementById('panel-history').style.display='none';
   document.getElementById('panel-leaderboard').style.display='none';
+  const ps=document.getElementById('panel-season'); if(ps) ps.style.display='none';
+  const pf=document.getElementById('panel-friends'); if(pf) pf.style.display='none';
   showHamburgerIfMenu();
 }
 function openSettings(){
@@ -9285,6 +9368,11 @@ function openProfilePanel(){
   document.getElementById("prof-email-display").textContent = email ? ("📧 " + email) : "";
   document.getElementById("prof-username-input").value = name;
 
+  // Code ami : affiche le code local immédiatement, puis synchronise/crée via Firestore si connecté
+  const fcEl = document.getElementById("prof-friendcode-display");
+  fcEl.textContent = _getLocalFriendCode();
+  ensureFriendCode().then(code => { if(code) fcEl.textContent = code; });
+
   // Reset confirm field
   const confirmEl = document.getElementById("prof-confirm-input");
   if(confirmEl) confirmEl.value = "";
@@ -9347,6 +9435,14 @@ function openProfilePanel(){
     };
     iconGrid.appendChild(btn);
   });
+}
+
+function copyFriendCode(){
+  const code = document.getElementById("prof-friendcode-display").textContent;
+  if(!code || code.includes("-")) return;
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(code).then(()=>_showBorderToast("✅ Code copié !"));
+  }
 }
 
 function closeProfilePanel(){
@@ -9593,15 +9689,15 @@ async function loginAccount(){
 // ===== QUÊTES QUOTIDIENNES ===========================================
 // =====================================================================
 const QUEST_DEFINITIONS = [
-  {id:'kills10',   icon:'⚔️',  title:'Éliminateur',         desc:'Élimine 10 ennemis en parties',   target:10, reward:{coins:30},  rewardLabel:'+30 🪙'},
-  {id:'kills25',   icon:'💀',  title:'Destructeur',          desc:'Élimine 25 ennemis en parties',   target:25, reward:{coins:60},  rewardLabel:'+60 🪙'},
-  {id:'games3',    icon:'🎮',  title:'Joueur assidu',        desc:'Joue 3 parties',                  target:3,  reward:{coins:20},  rewardLabel:'+20 🪙'},
-  {id:'wins1',     icon:'🏆',  title:'Premier sang',         desc:'Remporte 1 victoire',             target:1,  reward:{coins:50},  rewardLabel:'+50 🪙'},
-  {id:'top3x2',    icon:'🥉',  title:'Podium régulier',      desc:'Termine dans le top 3 (×2)',      target:2,  reward:{coins:40},  rewardLabel:'+40 🪙'},
-  {id:'gems15',    icon:'💎',  title:'Chasseur de gemmes',   desc:'Collecte 15 gemmes',              target:15, reward:{pearls:5},  rewardLabel:'+5 🔮'},
-  {id:'coins50',   icon:'🪙',  title:'Économe',              desc:'Gagne 50 pièces en parties',      target:50, reward:{pearls:3},  rewardLabel:'+3 🔮'},
-  {id:'survive90', icon:'⏱',   title:'Survivant',            desc:'Survie 90s dans une partie',      target:90, reward:{coins:35},  rewardLabel:'+35 🪙'},
-  {id:'chest1',    icon:'📦',  title:'Ouvreur',              desc:'Ouvre 1 coffre',                  target:1,  reward:{coins:25},  rewardLabel:'+25 🪙'},
+  {id:'kills10',   icon:'⚔️',  title:'Éliminateur',         desc:'Élimine 10 ennemis en parties',   target:10, seasonXP:30, rewardLabel:'+30 XP'},
+  {id:'kills25',   icon:'💀',  title:'Destructeur',          desc:'Élimine 25 ennemis en parties',   target:25, seasonXP:60, rewardLabel:'+60 XP'},
+  {id:'games3',    icon:'🎮',  title:'Joueur assidu',        desc:'Joue 3 parties',                  target:3,  seasonXP:20, rewardLabel:'+20 XP'},
+  {id:'wins1',     icon:'🏆',  title:'Premier sang',         desc:'Remporte 1 victoire',             target:1,  seasonXP:50, rewardLabel:'+50 XP'},
+  {id:'top3x2',    icon:'🥉',  title:'Podium régulier',      desc:'Termine dans le top 3 (×2)',      target:2,  seasonXP:40, rewardLabel:'+40 XP'},
+  {id:'gems15',    icon:'💎',  title:'Chasseur de gemmes',   desc:'Collecte 15 gemmes',              target:15, seasonXP:30, rewardLabel:'+30 XP'},
+  {id:'coins50',   icon:'🪙',  title:'Économe',              desc:'Gagne 50 pièces en parties',      target:50, seasonXP:25, rewardLabel:'+25 XP'},
+  {id:'survive90', icon:'⏱',   title:'Survivant',            desc:'Survie 90s dans une partie',      target:90, seasonXP:35, rewardLabel:'+35 XP'},
+  {id:'chest1',    icon:'📦',  title:'Ouvreur',              desc:'Ouvre 1 coffre',                  target:1,  seasonXP:25, rewardLabel:'+25 XP'},
 ];
 
 function _getQuestSave(){
@@ -9659,17 +9755,71 @@ function _updateQuestBadge(data){
   badge.style.display=hasReady?'inline':'none';
 }
 
-function openQuests(){
+// openQuests/closePanelQuests supprimés : les quêtes vivent désormais
+// uniquement dans l'onglet Saison/Pass (voir openSeason / closePanelSeason).
+
+// ===== AMIS =====
+function _getFriends(){
+  try{ return JSON.parse(localStorage.getItem('bh_friends_v1')||'[]'); }catch(e){ return []; }
+}
+function _setFriends(list){
+  try{ localStorage.setItem('bh_friends_v1', JSON.stringify(list)); }catch(e){}
+}
+function openFriends(){
   closeAllPanels();
   closeHamburgerMenu();
   document.getElementById('hamburger-btn').style.display='none';
-  document.getElementById('panel-quests').style.display='block';
-  renderQuests();
-  startQuestCountdown();
+  document.getElementById('panel-friends').style.display='block';
+  renderFriends();
 }
-function closePanelQuests(){
-  document.getElementById('panel-quests').style.display='none';
+function closePanelFriends(){
+  document.getElementById('panel-friends').style.display='none';
   showHamburgerIfMenu();
+}
+function renderFriends(){
+  const list=_getFriends();
+  const wrap=document.getElementById('friends-list');
+  if(!list.length){
+    wrap.innerHTML='<div style="text-align:center;color:#606080;padding:32px 0;font-size:14px;">Aucun ami pour le moment<br><span style="font-size:12px;">Ajoute un code ami ci-dessus !</span></div>';
+    return;
+  }
+  wrap.innerHTML=list.map((f,i)=>`
+    <div style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:12px 16px;margin-bottom:10px;">
+      <div style="font-size:26px;">😀</div>
+      <div style="flex:1;">
+        <div style="font-family:'Boogaloo',cursive;font-size:15px;">${f.name}</div>
+        <div style="font-size:11px;color:#4cc9f0;">${f.code}</div>
+      </div>
+      <button onclick="removeFriend(${i})" style="border:none;background:rgba(255,80,80,.18);color:#ff8888;font-family:'Boogaloo',cursive;font-size:12px;border-radius:10px;padding:6px 12px;cursor:pointer;">Retirer</button>
+    </div>
+  `).join('');
+}
+async function addFriend(){
+  const input=document.getElementById('friend-add-input');
+  const raw=(input.value||'').trim();
+  const fb=document.getElementById('friends-feedback');
+  if(!raw){ fb.style.color='#ff8888'; fb.textContent='❌ Entre un code ami'; return; }
+  const code = ('#'+raw.replace(/^#/,'')).toUpperCase();
+  const myCode = await ensureFriendCode();
+  if(code === myCode){ fb.style.color='#ff8888'; fb.textContent="❌ Tu ne peux pas t'ajouter toi-même"; return; }
+  const list=_getFriends();
+  if(list.some(f=>f.code===code)){ fb.style.color='#ff8888'; fb.textContent='❌ Déjà dans ta liste'; return; }
+  fb.style.color='#a0c4ff'; fb.textContent='🔎 Recherche...';
+  const result = await lookupFriendByCode(code);
+  if(!result){ fb.style.color='#ff8888'; fb.textContent='❌ Code ami introuvable'; return; }
+  list.push({code, name: result.name||'Joueur'});
+  _setFriends(list);
+  input.value='';
+  fb.style.color='#a8ff3e';
+  fb.textContent='✅ '+(result.name||'Joueur')+' ajouté !';
+  setTimeout(()=>{fb.textContent='';},2000);
+  renderFriends();
+}
+function removeFriend(i){
+  const list=_getFriends();
+  list.splice(i,1);
+  _setFriends(list);
+  renderFriends();
 }
 
 function renderQuests(){
@@ -9708,16 +9858,16 @@ function claimQuest(idx){
   const q=data.quests[idx];
   if(!q||q.claimed||q.progress<q.target) return;
   q.claimed=true;
-  // Grant reward
-  if(q.reward.coins){ money+=q.reward.coins; }
-  if(q.reward.pearls){ pearls+=q.reward.pearls; }
+  // Les quêtes sont désormais le SEUL moyen de monter dans le pass.
+  _addSeasonXP(q.seasonXP||25);
   saveState(); updateUI();
   _saveQuestProgress(data);
   renderQuests();
+  renderSeason();
   // Flash
   const fb=document.createElement('div');
   fb.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(168,255,62,.95);color:#1a1a2e;font-family:\'Boogaloo\',cursive;font-size:28px;border-radius:20px;padding:16px 32px;z-index:99999;pointer-events:none;animation:popIn .4s ease forwards;';
-  fb.textContent='🎁 '+q.rewardLabel+' !';
+  fb.textContent='🎁 +'+(q.seasonXP||25)+' XP Pass !';
   document.body.appendChild(fb);
   setTimeout(()=>fb.remove(),1800);
 }
@@ -9817,6 +9967,8 @@ function openSeason(){
   document.getElementById('hamburger-btn').style.display='none';
   document.getElementById('panel-season').style.display='block';
   renderSeason();
+  renderQuests();
+  startQuestCountdown();
 }
 function closePanelSeason(){
   document.getElementById('panel-season').style.display='none';
@@ -9922,10 +10074,8 @@ function claimSeasonReward(level){
     const time2=typeof gameTime!=='undefined'?gameTime:0;
     const won=rank===1;
     updateQuestProgress({kills:kills2,won,rank,gems:gems2,coins:coins2,surviveTime:time2});
-    // Season XP: 10 base + 5 per kill + 20 if win
-    const sxp=10+kills2*5+(won?20:0)+(rank<=3?10:0);
-    _addSeasonXP(sxp);
-
+    // L'XP de saison ne vient plus des parties : seules les quêtes terminées
+    // (et réclamées dans l'onglet Pass) font monter de niveau dans le pass.
   };
 })();
 
