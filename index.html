@@ -9015,14 +9015,18 @@ function mpStartGameSync(){
     });
   }
 
-  // Listen for hits other players send us
-  mpHitsRef = mpPlayersRef.child(mpGetPid()).child("incomingHits");
+  // Listen for hits other players send us — nœud de partie partagé (cf mpSendHit
+  // ci-dessous pour l'explication : un nœud privé par joueur était bloqué par les
+  // règles de sécurité Firebase, donc aucun dégât n'arrivait jamais aux vrais
+  // joueurs alors que les bots, eux, encaissaient bien leurs coups).
+  mpHitsRef = mpRoomRef.child("incomingPlayerHits");
   mpHitsRef.on("child_added", snap=>{
     if(!gameRunning) return;
     const hit = snap.val();
     const key = snap.key;
+    if(!hit || hit.to!==mpGetPid()){ return; } // pas pour nous, on laisse l'auteur ou le host le nettoyer
     mpHitsRef.child(key).remove();
-    if(!hit || !hit.dmg) return;
+    if(!hit.dmg) return;
     if(playerShielded){spawnParticles(playerX,playerY,"#adb5bd",6);return;}
     if(playerInvisible){return;}
     playerHP-=hit.dmg;
@@ -9038,13 +9042,22 @@ function mpStartGameSync(){
 }
 
 // Send a damage event to a remote player (they apply it to their own HP).
+// IMPORTANT : on écrit dans un nœud de PARTIE PARTAGÉ (mpRoomRef/incomingPlayerHits),
+// pas dans le sous-arbre Firebase du joueur ciblé (mpPlayersRef.child(pid)/...).
+// Les règles de sécurité Firebase autorisent en général un client à écrire
+// uniquement dans SON PROPRE nœud joueur — écrire chez un autre joueur était donc
+// très probablement rejeté silencieusement (aucune erreur visible côté UI), ce qui
+// expliquait que les bots prenaient des dégâts (via incomingBotHits, un nœud
+// partagé) mais pas les vrais joueurs (via players/{pid}/incomingHits, un nœud
+// privé). On suit ici exactement le même schéma que mpSendBotHit, qui fonctionne.
 function mpSendHit(pid, dmg){
-  if(!fdb || !mpPlayersRef || !pid) return;
-  mpPlayersRef.child(pid).child("incomingHits").push({
-    dmg: Math.round(dmg*10)/10,
-    from: mpGetPid(),
-    t: Date.now()
-  });
+  if(!fdb || !mpRoomRef || !pid) return;
+  try{
+    mpRoomRef.child("incomingPlayerHits").push({
+      to: pid, dmg: Math.round(dmg*10)/10,
+      from: mpGetPid(), t: Date.now()
+    });
+  }catch(e){}
 }
 
 // Called every frame from update(): interpolate remote positions, push our own state.
