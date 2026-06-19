@@ -1257,8 +1257,8 @@ canvas{display:block;touch-action:none;}
   </div>
 
   <!-- JOUER (flottant juste au-dessus de la barre) -->
-  <div id="menu-play-wrap" style="position:absolute;bottom:118px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;z-index:3;">
-    <div id="play-rotation-clock" style="display:flex;align-items:center;gap:5px;background:rgba(0,0,0,.5);border:1.5px solid rgba(255,209,102,.4);border-radius:14px;padding:4px 12px;margin-bottom:8px;font-family:'Boogaloo',cursive;font-size:13px;color:#ffd166;backdrop-filter:blur(6px);box-shadow:0 2px 10px rgba(0,0,0,.35);white-space:nowrap;">
+  <div id="menu-play-wrap" style="position:absolute;bottom:128px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;z-index:3;">
+    <div id="play-rotation-clock" style="display:flex;align-items:center;gap:5px;background:rgba(0,0,0,.5);border:1.5px solid rgba(255,209,102,.4);border-radius:14px;padding:4px 12px;margin-bottom:16px;font-family:'Boogaloo',cursive;font-size:13px;color:#ffd166;backdrop-filter:blur(6px);box-shadow:0 2px 10px rgba(0,0,0,.35);white-space:nowrap;">
       <span style="font-size:14px;line-height:1;">⏰</span>
       <span id="play-rotation-countdown">90m 00s</span>
     </div>
@@ -8040,6 +8040,203 @@ async function ensureFriendCode(){
     return code;
   }catch(e){ return local; }
 }
+// ===== PRÉSENCE EN LIGNE =====
+// Un doc presence/{code} mis à jour toutes les 15s tant que l'app est active.
+// Un ami est considéré "en ligne" si son dernier heartbeat date de < 30s.
+const PRESENCE_TTL_MS = 30000;
+let _presenceHeartbeatInterval = null;
+let _duoOpenForInvites = false; // true quand le joueur est dans le menu, prêt à recevoir une invite Duo
+async function _writePresence(){
+  try{
+    const code = await ensureFriendCode();
+    if(!code) return;
+    const ok = await _initFirebase();
+    if(!ok) return;
+    await _fbDb.collection("presence").doc(code.slice(1)).set({
+      lastSeen: Date.now(),
+      duoAvailable: !!_duoOpenForInvites
+    }, {merge:true});
+  }catch(e){}
+}
+function startPresenceHeartbeat(){
+  _writePresence();
+  if(_presenceHeartbeatInterval) clearInterval(_presenceHeartbeatInterval);
+  _presenceHeartbeatInterval = setInterval(_writePresence, 15000);
+}
+async function _markOffline(){
+  try{
+    const code = _getLocalFriendCode();
+    const ok = await _initFirebase();
+    if(!ok || !code) return;
+    await _fbDb.collection("presence").doc(code.slice(1)).set({lastSeen:0}, {merge:true});
+  }catch(e){}
+}
+window.addEventListener("beforeunload", _markOffline);
+// Récupère le statut en ligne d'une liste de codes amis (renvoie un Map code->{online,duoAvailable})
+async function getFriendsOnlineStatus(codes){
+  const result = new Map();
+  if(!codes.length) return result;
+  const ok = await _initFirebase();
+  if(!ok) return result;
+  const now = Date.now();
+  try{
+    const docs = await Promise.all(codes.map(c=>_fbDb.collection("presence").doc(c.replace(/^#/,"")).get().catch(()=>null)));
+    docs.forEach((d,i)=>{
+      const data = d && d.exists ? d.data() : null;
+      const online = data && data.lastSeen && (now - data.lastSeen) < PRESENCE_TTL_MS;
+      result.set(codes[i], {online: !!online, duoAvailable: !!(online && data.duoAvailable)});
+    });
+  }catch(e){}
+  return result;
+}
+// Invite un ami en ligne à former une équipe Duo (lobby complet en brique 2)
+async function inviteFriendToDuo(code, name){
+  try{
+    const myCode = await ensureFriendCode();
+    const ok = await _initFirebase();
+    if(!ok || !myCode) return;
+    await _fbDb.collection("duoInvites").doc(code.replace(/^#/,"")).set({
+      fromCode: myCode,
+      fromName: (getSavedAccount()&&getSavedAccount().username)||"Joueur",
+      toCode: code,
+      status: "pending",
+      sentAt: Date.now()
+    });
+    const fb=document.createElement('div');
+    fb.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:linear-gradient(135deg,#1a1a3a,#252550);border:2px solid rgba(76,201,240,.5);color:#fff;font-family:\'Boogaloo\',cursive;font-size:16px;border-radius:20px;padding:14px 24px;z-index:99999;text-align:center;pointer-events:none;animation:popIn .4s ease forwards;';
+    fb.innerHTML=`👥 Invitation envoyée à ${name} !`;
+    document.body.appendChild(fb);
+    setTimeout(()=>fb.remove(),2000);
+  }catch(e){}
+}
+// ===== ÉQUIPE DUO : invitation, acceptation, état partenaire =====
+let currentDuoPartner = null; // {code, name, emoji} ou null
+let _duoInviteListenerUnsub = null;
+let _duoTeamListenerUnsub = null;
+let _pendingDuoInvitePopup = null;
+
+function _duoTeamId(codeA, codeB){
+  return [codeA.replace(/^#/,""), codeB.replace(/^#/,"")].sort().join("_");
+}
+
+// Écoute les invitations entrantes (doc duoInvites/{monCode}) tant qu'on est dans le menu
+async function startDuoInviteListener(){
+  stopDuoInviteListener();
+  const myCode = await ensureFriendCode();
+  if(!myCode) return;
+  const ok = await _initFirebase();
+  if(!ok) return;
+  try{
+    _duoInviteListenerUnsub = _fbDb.collection("duoInvites").doc(myCode.replace(/^#/,"")).onSnapshot(doc=>{
+      if(!doc.exists) return;
+      const d = doc.data();
+      if(d.status==="pending"){
+        _showDuoInvitePopup(d.fromCode, d.fromName);
+      }
+    }, ()=>{});
+    _duoTeamListenerUnsub = _fbDb.collection("duoTeams")
+      .where("codes","array-contains", myCode.replace(/^#/,""))
+      .onSnapshot(snap=>{
+        if(snap.empty){
+          if(currentDuoPartner){ currentDuoPartner=null; _renderDuoPartnerWidget(); }
+          return;
+        }
+        const teamDoc = snap.docs[0].data();
+        const partnerCode = teamDoc.codeA===myCode.replace(/^#/,"") ? teamDoc.codeB : teamDoc.codeA;
+        const partnerName = teamDoc.codeA===myCode.replace(/^#/,"") ? teamDoc.nameB : teamDoc.nameA;
+        currentDuoPartner = {code:"#"+partnerCode, name:partnerName||"Coéquipier", emoji:"😀"};
+        _renderDuoPartnerWidget();
+      }, ()=>{});
+  }catch(e){}
+}
+function stopDuoInviteListener(){
+  if(_duoInviteListenerUnsub){ try{_duoInviteListenerUnsub();}catch(e){} _duoInviteListenerUnsub=null; }
+  if(_duoTeamListenerUnsub){ try{_duoTeamListenerUnsub();}catch(e){} _duoTeamListenerUnsub=null; }
+}
+
+function _showDuoInvitePopup(fromCode, fromName){
+  if(_pendingDuoInvitePopup) return; // une seule popup à la fois
+  const pop=document.createElement('div');
+  pop.id="duo-invite-popup";
+  pop.style.cssText='position:fixed;top:18%;left:50%;transform:translate(-50%,0);background:linear-gradient(135deg,#1a1a3a,#252550);border:2px solid rgba(76,201,240,.6);color:#fff;font-family:\'Boogaloo\',cursive;border-radius:20px;padding:18px 24px;z-index:99999;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.5);min-width:240px;';
+  pop.innerHTML=`
+    <div style="font-size:17px;margin-bottom:10px;">👥 ${fromName} t'invite en Duo !</div>
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <button id="duo-invite-accept" style="border:none;background:linear-gradient(135deg,#a8ff3e,#50ff78);color:#1a1a2e;font-family:'Boogaloo',cursive;font-size:14px;border-radius:14px;padding:8px 18px;cursor:pointer;">✔ Accepter</button>
+      <button id="duo-invite-decline" style="border:none;background:rgba(255,80,80,.25);color:#ff9999;font-family:'Boogaloo',cursive;font-size:14px;border-radius:14px;padding:8px 18px;cursor:pointer;">✕ Refuser</button>
+    </div>`;
+  document.body.appendChild(pop);
+  _pendingDuoInvitePopup = pop;
+  document.getElementById("duo-invite-accept").onclick=()=>acceptDuoInvite(fromCode, fromName);
+  document.getElementById("duo-invite-decline").onclick=()=>declineDuoInvite(fromCode);
+}
+function _removeDuoInvitePopup(){
+  if(_pendingDuoInvitePopup){ _pendingDuoInvitePopup.remove(); _pendingDuoInvitePopup=null; }
+}
+
+async function acceptDuoInvite(fromCode, fromName){
+  try{
+    const myCode = await ensureFriendCode();
+    const ok = await _initFirebase();
+    if(!ok || !myCode) return;
+    const myName = (typeof currentAccountName==="function" ? currentAccountName() : null) || "Joueur";
+    const teamId = _duoTeamId(myCode, fromCode);
+    const cA = fromCode.replace(/^#/,""), cB = myCode.replace(/^#/,"");
+    await _fbDb.collection("duoTeams").doc(teamId).set({
+      codeA: cA, nameA: fromName||"Joueur",
+      codeB: cB, nameB: myName,
+      codes: [cA, cB],
+      createdAt: Date.now()
+    });
+    await _fbDb.collection("duoInvites").doc(myCode.replace(/^#/,"")).set({status:"accepted"}, {merge:true});
+    _removeDuoInvitePopup();
+  }catch(e){}
+}
+async function declineDuoInvite(fromCode){
+  try{
+    const myCode = await ensureFriendCode();
+    const ok = await _initFirebase();
+    if(ok && myCode) await _fbDb.collection("duoInvites").doc(myCode.replace(/^#/,"")).set({status:"declined"}, {merge:true});
+  }catch(e){}
+  _removeDuoInvitePopup();
+}
+async function leaveDuoTeam(){
+  if(!currentDuoPartner) return;
+  try{
+    const myCode = await ensureFriendCode();
+    const ok = await _initFirebase();
+    if(!ok || !myCode) return;
+    const teamId = _duoTeamId(myCode, currentDuoPartner.code);
+    await _fbDb.collection("duoTeams").doc(teamId).delete();
+  }catch(e){}
+  currentDuoPartner = null;
+  _renderDuoPartnerWidget();
+}
+
+// Affiche les deux héros côte à côte dans le menu quand une équipe Duo est formée
+function _renderDuoPartnerWidget(){
+  let widget = document.getElementById("duo-partner-widget");
+  if(!currentDuoPartner){
+    if(widget) widget.remove();
+    return;
+  }
+  if(!widget){
+    widget = document.createElement("div");
+    widget.id = "duo-partner-widget";
+    widget.style.cssText = "position:absolute;top:64px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:14px;background:rgba(0,0,0,.55);border:1.5px solid rgba(76,201,240,.4);border-radius:24px;padding:8px 18px;z-index:5;backdrop-filter:blur(6px);";
+    const stage = document.getElementById("menu-stage") || document.getElementById("menu");
+    (stage||document.body).appendChild(widget);
+  }
+  const myEmoji = document.getElementById("hero-preview") ? document.getElementById("hero-preview").textContent : "😀";
+  const myName = (typeof currentAccountName==="function" ? currentAccountName() : null) || "Toi";
+  widget.innerHTML = `
+    <div style="text-align:center;"><div style="font-size:30px;">${myEmoji}</div><div style="font-size:10px;color:#fff;">${myName}</div></div>
+    <div style="font-family:'Boogaloo',cursive;font-size:18px;color:#4cc9f0;">+</div>
+    <div style="text-align:center;"><div style="font-size:30px;">${currentDuoPartner.emoji}</div><div style="font-size:10px;color:#fff;">${currentDuoPartner.name}</div></div>
+    <button onclick="leaveDuoTeam()" style="border:none;background:rgba(255,80,80,.2);color:#ff9999;font-size:11px;border-radius:10px;padding:4px 10px;cursor:pointer;margin-left:4px;">Quitter</button>
+  `;
+}
+
 // Recherche un joueur par code ami via le registre Firestore
 async function lookupFriendByCode(code){
   const clean = code.replace(/^#/,"").trim().toUpperCase();
@@ -8838,7 +9035,8 @@ function runMatchmaking() {
   const playerHeroEmoji = document.getElementById("hero-preview").textContent || "😀";
   const playerName = (typeof currentAccountName==="function" ? currentAccountName() : null) || "Toi";
   const playerTrophies = parseInt(document.getElementById("trophies")?.textContent||0);
-  const myInfo = {name: playerName, tag: "#YOU", emoji: playerHeroEmoji, trophies: playerTrophies, isPlayer:true, heroIndex: selected};
+  const myInfo = {name: playerName, tag: "#YOU", emoji: playerHeroEmoji, trophies: playerTrophies, isPlayer:true, heroIndex: selected,
+    duoPartnerCode: (selectedMode && selectedMode.id==="duo" && currentDuoPartner) ? currentDuoPartner.code.replace(/^#/,"") : null};
   addPlayerToSlot(0, myInfo);
   updateMmBar(1, 11);
 
@@ -8966,6 +9164,10 @@ function mpFinalizeMatch(status, countEl){
     mpRoomRef.child("status").set("started");
     mpRoomRef.child("spawnSeed").set(_spawnSeed);
     mpRoomRef.child("matchStartAt").set(_matchStartAt);
+    // La map est figée par le host au moment du lancement et partagée à tous,
+    // pour que tout le monde joue sur EXACTEMENT la même map (et non chacun
+    // sa propre map calculée localement depuis l'heure de rotation).
+    mpRoomRef.child("mapId").set(selectedMap.id);
     status.textContent = "✅ Partie trouvée !";
     countEl.textContent = "11 / 11";
     mpFillRemainingWithBots(1 + realCount);
@@ -8981,10 +9183,19 @@ function mpFinalizeMatch(status, countEl){
       mpRoomRef.child("matchStartAt").once("value", startSnap=>{
         const startAt = startSnap.val();
         if(typeof startAt==="number") window._sharedMatchStartAt = startAt;
-        status.textContent = "✅ Partie trouvée !";
-        countEl.textContent = "11 / 11";
-        mpFillRemainingWithBots(1 + realCount);
-        setTimeout(()=>{ if(!mmCancelled) launchFromMatchmaking(); }, 900);
+        // Lit la map figée par le host pour que tous les clients jouent
+        // la MÊME map, plutôt que chacun la sienne calculée localement.
+        mpRoomRef.child("mapId").once("value", mapSnap=>{
+          const mapId = mapSnap.val();
+          if(typeof mapId==="string"){
+            const hostMap = MAPS.find(m=>m.id===mapId);
+            if(hostMap) selectedMap = hostMap;
+          }
+          status.textContent = "✅ Partie trouvée !";
+          countEl.textContent = "11 / 11";
+          mpFillRemainingWithBots(1 + realCount);
+          setTimeout(()=>{ if(!mmCancelled) launchFromMatchmaking(); }, 900);
+        });
       });
     });
   } else {
@@ -10438,16 +10649,26 @@ async function renderFriends(){
   if(!list.length){
     wrap.innerHTML='<div style="text-align:center;color:#606080;padding:32px 0;font-size:14px;">Aucun ami pour le moment<br><span style="font-size:12px;">Ajoute un code ami ci-dessus !</span></div>';
   } else {
-    wrap.innerHTML=list.map((f,i)=>`
+    const statusMap = await getFriendsOnlineStatus(list.map(f=>f.code));
+    wrap.innerHTML=list.map((f,i)=>{
+      const st = statusMap.get(f.code) || {online:false, duoAvailable:false};
+      const dotColor = st.online ? '#50ff78' : '#666';
+      const statusLabel = st.online ? 'En ligne' : 'Hors ligne';
+      const inviteBtn = st.duoAvailable
+        ? `<button onclick="inviteFriendToDuo('${f.code}','${(f.name||'').replace(/'/g,"")}')" style="border:none;background:linear-gradient(135deg,#4cc9f0,#4361ee);color:#fff;font-family:'Boogaloo',cursive;font-size:12px;border-radius:10px;padding:6px 12px;cursor:pointer;">Inviter</button>`
+        : '';
+      return `
       <div style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:12px 16px;margin-bottom:10px;">
-        <div style="font-size:26px;">😀</div>
+        <div style="position:relative;font-size:26px;">😀<span style="position:absolute;bottom:-2px;right:-2px;width:11px;height:11px;border-radius:50%;background:${dotColor};border:2px solid #0a0a1a;"></span></div>
         <div style="flex:1;">
           <div style="font-family:'Boogaloo',cursive;font-size:15px;">${f.name}</div>
           <div style="font-size:11px;color:#4cc9f0;">${f.code}</div>
+          <div style="font-size:10px;color:${st.online?'#a8ff3e':'#707090'};">${statusLabel}</div>
         </div>
+        ${inviteBtn}
         <button onclick="removeFriend(${i})" style="border:none;background:rgba(255,80,80,.18);color:#ff8888;font-family:'Boogaloo',cursive;font-size:12px;border-radius:10px;padding:6px 12px;cursor:pointer;">Retirer</button>
-      </div>
-    `).join('');
+      </div>`;
+    }).join('');
   }
 
   // Demandes reçues en attente
@@ -10822,9 +11043,17 @@ window.closeAllPanels=function(){
 window.addEventListener("load", ()=>{
   const menu = document.getElementById("menu");
   // Observe menu visibility changes to keep the profile button in sync
-  const _menuObserver = new MutationObserver(()=>{ if(typeof updateProfileBtn==='function') updateProfileBtn(); });
+  // (et la disponibilité Duo : on est "invitable" seulement quand le menu est affiché)
+  const _menuObserver = new MutationObserver(()=>{
+    if(typeof updateProfileBtn==='function') updateProfileBtn();
+    _duoOpenForInvites = !!menu && menu.style.display !== 'none';
+    if(_duoOpenForInvites) _renderDuoPartnerWidget();
+  });
   if(menu) _menuObserver.observe(menu, {attributes:true, attributeFilter:["style"]});
   updateProfileBtn();
+  _duoOpenForInvites = !!menu && menu.style.display !== 'none';
+  startPresenceHeartbeat();
+  startDuoInviteListener();
   // Appliquer les paramètres sauvegardés dès le démarrage
   try{
     const s=JSON.parse(localStorage.getItem('gameSettings')||'{}');
