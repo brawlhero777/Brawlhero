@@ -988,6 +988,14 @@ canvas{display:block;touch-action:none;}
     </div>
     <div style="font-size:11px;color:#606080;text-align:center;margin-top:-12px;margin-bottom:14px;">Demande le code ami de la personne dans son profil 👤</div>
     <div id="friends-feedback" style="font-size:12px;color:#a8ff3e;text-align:center;margin-bottom:10px;min-height:14px;"></div>
+
+    <!-- Demandes reçues -->
+    <div id="friend-requests-section" style="display:none;margin-bottom:18px;">
+      <div style="font-family:'Boogaloo',cursive;font-size:16px;color:#a8ff3e;margin-bottom:8px;">📨 Demandes reçues</div>
+      <div id="friend-requests-list"></div>
+    </div>
+
+    <div style="font-family:'Boogaloo',cursive;font-size:16px;color:#4cc9f0;margin-bottom:8px;">👥 Mes amis</div>
     <div id="friends-list"></div>
   </div>
 </div>
@@ -7830,6 +7838,85 @@ async function lookupFriendByCode(code){
   }catch(e){ return null; }
 }
 
+// ===== DEMANDES D'AMI (Firestore) =====
+// Doc id = "FROMCODE_TOCODE" (sans #), status: 'pending' | 'accepted' | 'declined'
+function _reqDocId(fromCode, toCode){
+  return fromCode.replace(/^#/,"") + "_" + toCode.replace(/^#/,"");
+}
+async function sendFriendRequest(myCode, myName, theirCode, theirName){
+  const ok = await _initFirebase();
+  if(!ok) return {success:false, reason:"offline"};
+  try{
+    const id = _reqDocId(myCode, theirCode);
+    const existing = await _fbDb.collection("friendRequests").doc(id).get();
+    if(existing.exists && existing.data().status==="pending"){
+      return {success:false, reason:"already_pending"};
+    }
+    // Vérifie si l'autre nous a déjà envoyé une demande (réciproque) → on l'accepte directement
+    const reverseId = _reqDocId(theirCode, myCode);
+    const reverseDoc = await _fbDb.collection("friendRequests").doc(reverseId).get();
+    if(reverseDoc.exists && reverseDoc.data().status==="pending"){
+      await acceptFriendRequest(reverseId, reverseDoc.data());
+      return {success:true, reason:"auto_accepted"};
+    }
+    await _fbDb.collection("friendRequests").doc(id).set({
+      fromCode:myCode, fromName:myName, toCode:theirCode, toName:theirName,
+      status:"pending", createdAt:Date.now()
+    });
+    return {success:true, reason:"sent"};
+  }catch(e){ return {success:false, reason:"error"}; }
+}
+async function getIncomingFriendRequests(myCode){
+  const ok = await _initFirebase();
+  if(!ok) return [];
+  try{
+    const snap = await _fbDb.collection("friendRequests")
+      .where("toCode","==",myCode).where("status","==","pending").get();
+    return snap.docs.map(d=>({id:d.id, ...d.data()}));
+  }catch(e){ return []; }
+}
+async function acceptFriendRequest(reqId, reqData){
+  const ok = await _initFirebase();
+  if(!ok) return false;
+  try{
+    await _fbDb.collection("friendRequests").doc(reqId).set({status:"accepted"}, {merge:true});
+    // Ajoute chacun à la liste d'amis confirmés de l'autre (cache local pour affichage rapide)
+    const myList=_getFriends();
+    if(!myList.some(f=>f.code===reqData.fromCode)){
+      myList.push({code:reqData.fromCode, name:reqData.fromName});
+      _setFriends(myList);
+    }
+    return true;
+  }catch(e){ return false; }
+}
+async function declineFriendRequest(reqId){
+  const ok = await _initFirebase();
+  if(!ok) return false;
+  try{
+    await _fbDb.collection("friendRequests").doc(reqId).set({status:"declined"}, {merge:true});
+    return true;
+  }catch(e){ return false; }
+}
+// Vérifie si une de NOS demandes envoyées a été acceptée entre-temps, pour mettre à jour notre liste locale
+async function syncAcceptedOutgoingRequests(myCode){
+  const ok = await _initFirebase();
+  if(!ok) return;
+  try{
+    const snap = await _fbDb.collection("friendRequests")
+      .where("fromCode","==",myCode).where("status","==","accepted").get();
+    const list=_getFriends();
+    let changed=false;
+    snap.docs.forEach(d=>{
+      const data=d.data();
+      if(!list.some(f=>f.code===data.toCode)){
+        list.push({code:data.toCode, name:data.toName});
+        changed=true;
+      }
+    });
+    if(changed) _setFriends(list);
+  }catch(e){}
+}
+
 function captureGameState(){
   return { trophies:trophies||0, money:money||0, pearls:pearls||0, selected:selected||0, hDataRaw:JSON.stringify(hData) };
 }
@@ -9779,21 +9866,68 @@ function closePanelFriends(){
 function renderFriends(){
   const list=_getFriends();
   const wrap=document.getElementById('friends-list');
+  const reqWrap=document.getElementById('friend-requests-list');
+
   if(!list.length){
     wrap.innerHTML='<div style="text-align:center;color:#606080;padding:32px 0;font-size:14px;">Aucun ami pour le moment<br><span style="font-size:12px;">Ajoute un code ami ci-dessus !</span></div>';
+  } else {
+    wrap.innerHTML=list.map((f,i)=>`
+      <div style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:12px 16px;margin-bottom:10px;">
+        <div style="font-size:26px;">😀</div>
+        <div style="flex:1;">
+          <div style="font-family:'Boogaloo',cursive;font-size:15px;">${f.name}</div>
+          <div style="font-size:11px;color:#4cc9f0;">${f.code}</div>
+        </div>
+        <button onclick="removeFriend(${i})" style="border:none;background:rgba(255,80,80,.18);color:#ff8888;font-family:'Boogaloo',cursive;font-size:12px;border-radius:10px;padding:6px 12px;cursor:pointer;">Retirer</button>
+      </div>
+    `).join('');
+  }
+
+  // Demandes reçues en attente
+  refreshIncomingFriendRequests();
+}
+
+async function refreshIncomingFriendRequests(){
+  const reqWrap=document.getElementById('friend-requests-list');
+  const reqSection=document.getElementById('friend-requests-section');
+  if(!reqWrap||!reqSection) return;
+  const myCode = await ensureFriendCode();
+  const requests = await getIncomingFriendRequests(myCode);
+  // Synchronise aussi les demandes qu'on a envoyées et qui ont été acceptées
+  await syncAcceptedOutgoingRequests(myCode);
+
+  if(!requests.length){
+    reqSection.style.display='none';
     return;
   }
-  wrap.innerHTML=list.map((f,i)=>`
-    <div style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:12px 16px;margin-bottom:10px;">
+  reqSection.style.display='block';
+  reqWrap.innerHTML=requests.map(r=>`
+    <div style="display:flex;align-items:center;gap:12px;background:rgba(168,255,62,.08);border:1px solid rgba(168,255,62,.25);border-radius:16px;padding:12px 16px;margin-bottom:10px;">
       <div style="font-size:26px;">😀</div>
       <div style="flex:1;">
-        <div style="font-family:'Boogaloo',cursive;font-size:15px;">${f.name}</div>
-        <div style="font-size:11px;color:#4cc9f0;">${f.code}</div>
+        <div style="font-family:'Boogaloo',cursive;font-size:15px;">${r.fromName}</div>
+        <div style="font-size:11px;color:#a8ff3e;">${r.fromCode} veut t'ajouter</div>
       </div>
-      <button onclick="removeFriend(${i})" style="border:none;background:rgba(255,80,80,.18);color:#ff8888;font-family:'Boogaloo',cursive;font-size:12px;border-radius:10px;padding:6px 12px;cursor:pointer;">Retirer</button>
+      <button onclick="respondFriendRequest('${r.id}',true)" style="border:none;background:rgba(168,255,62,.25);color:#a8ff3e;font-family:'Boogaloo',cursive;font-size:13px;border-radius:10px;padding:6px 12px;cursor:pointer;margin-right:4px;">✅</button>
+      <button onclick="respondFriendRequest('${r.id}',false)" style="border:none;background:rgba(255,80,80,.18);color:#ff8888;font-family:'Boogaloo',cursive;font-size:13px;border-radius:10px;padding:6px 12px;cursor:pointer;">✕</button>
     </div>
   `).join('');
+  // Stocke les data brutes pour respondFriendRequest
+  window._pendingFriendReqs = {};
+  requests.forEach(r=>{ window._pendingFriendReqs[r.id] = r; });
 }
+
+async function respondFriendRequest(reqId, accept){
+  const reqData = window._pendingFriendReqs && window._pendingFriendReqs[reqId];
+  if(!reqData) return;
+  if(accept){
+    await acceptFriendRequest(reqId, reqData);
+  } else {
+    await declineFriendRequest(reqId);
+  }
+  renderFriends();
+}
+
 async function addFriend(){
   const input=document.getElementById('friend-add-input');
   const raw=(input.value||'').trim();
@@ -9807,12 +9941,25 @@ async function addFriend(){
   fb.style.color='#a0c4ff'; fb.textContent='🔎 Recherche...';
   const result = await lookupFriendByCode(code);
   if(!result){ fb.style.color='#ff8888'; fb.textContent='❌ Code ami introuvable'; return; }
-  list.push({code, name: result.name||'Joueur'});
-  _setFriends(list);
+  const pd = getProfileData();
+  const acc = getSavedAccount();
+  const myName = pd.name || (acc && acc.username) || document.getElementById("hero-name-preview")?.textContent || "Joueur";
+  const sendResult = await sendFriendRequest(myCode, myName, code, result.name||'Joueur');
   input.value='';
-  fb.style.color='#a8ff3e';
-  fb.textContent='✅ '+(result.name||'Joueur')+' ajouté !';
-  setTimeout(()=>{fb.textContent='';},2000);
+  if(!sendResult.success && sendResult.reason==="already_pending"){
+    fb.style.color='#f9c74f'; fb.textContent='⏳ Demande déjà envoyée, en attente';
+    return;
+  }
+  if(!sendResult.success){
+    fb.style.color='#ff8888'; fb.textContent='❌ Impossible d\'envoyer la demande';
+    return;
+  }
+  if(sendResult.reason==="auto_accepted"){
+    fb.style.color='#a8ff3e'; fb.textContent='✅ Vous êtes maintenant amis !';
+  } else {
+    fb.style.color='#a8ff3e'; fb.textContent='📨 Demande envoyée à '+(result.name||'Joueur')+' !';
+  }
+  setTimeout(()=>{fb.textContent='';},2500);
   renderFriends();
 }
 function removeFriend(i){
