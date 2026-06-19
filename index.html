@@ -1247,7 +1247,7 @@ canvas{display:block;touch-action:none;}
     </button>
   </div>
 
-  <!-- HERO STAGE -->
+  <!-- HERO STAGE — deux héros côte à côte -->
   <div id="menu-stage">
     <div style="position:relative;display:inline-flex;align-items:center;justify-content:center;">
       <div id="hero-border-ring"></div>
@@ -2043,6 +2043,7 @@ function updateUI(){
   document.getElementById("pearls").textContent=pearls;
   document.getElementById("hero-preview").textContent=heroes[selected].emoji;
   document.getElementById("hero-name-preview").textContent=heroes[selected].name;
+  if(typeof _updateHero2Display==="function") _updateHero2Display();
 }
 
 // ===================== COLLECTION =====================
@@ -8110,7 +8111,7 @@ async function inviteFriendToDuo(code, name){
   }catch(e){}
 }
 // ===== ÉQUIPE DUO : invitation, acceptation, état partenaire =====
-let currentDuoPartner = null; // {code, name, emoji} ou null
+var currentDuoPartner = null; // {code, name, emoji} ou null
 let _duoInviteListenerUnsub = null;
 let _duoTeamListenerUnsub = null;
 let _pendingDuoInvitePopup = null;
@@ -8214,7 +8215,51 @@ async function leaveDuoTeam(){
 }
 
 // Affiche les deux héros côte à côte dans le menu quand une équipe Duo est formée
+function _updateHero2Display(){
+  const stage = document.getElementById("menu-stage");
+  const h1el = document.getElementById("hero-preview");
+  const n1el = document.getElementById("hero-name-preview");
+  if(!stage) return;
+  // Retire l ancien duo display si present
+  let duoRow = document.getElementById("menu-stage-duo-row");
+  if(!currentDuoPartner){
+    if(duoRow) duoRow.remove();
+    // Remet le hero1 en mode normal (grand)
+    if(h1el){ h1el.style.fontSize=""; }
+    return;
+  }
+  // Mode duo : reduit hero1, affiche hero2 cote a cote
+  if(h1el) h1el.style.fontSize="min(22vw,110px)";
+  if(!duoRow){
+    duoRow = document.createElement("div");
+    duoRow.id = "menu-stage-duo-row";
+    duoRow.style.cssText = "display:flex;flex-direction:row;justify-content:center;gap:32px;align-items:flex-end;width:100%;";
+    // Cree hero2
+    const col2 = document.createElement("div");
+    col2.style.cssText = "display:flex;flex-direction:column;align-items:center;gap:10px;";
+    const em2 = document.createElement("div");
+    em2.id = "hero-preview-2";
+    em2.style.cssText = "font-size:min(22vw,110px);line-height:1;animation:bob 2.2s 0.4s ease-in-out infinite;filter:drop-shadow(0 8px 30px rgba(76,201,240,.4));";
+    const nm2 = document.createElement("div");
+    nm2.id = "hero-name-preview-2";
+    nm2.style.cssText = "font-family:'Boogaloo',cursive;font-size:18px;color:#fff;background:rgba(0,0,0,.6);border:1.5px solid rgba(255,255,255,.15);border-radius:24px;padding:4px 18px;backdrop-filter:blur(6px);";
+    col2.appendChild(em2); col2.appendChild(nm2);
+    // Recup col1 = le parent du hero-preview
+    const col1 = h1el ? h1el.closest("div[style]") || h1el.parentElement : null;
+    if(col1 && col1 !== stage){
+      duoRow.appendChild(col1.cloneNode(false));
+      duoRow.children[0].appendChild(h1el.parentElement.cloneNode(true));
+    }
+    duoRow.appendChild(col2);
+    stage.appendChild(duoRow);
+  }
+  const h2 = document.getElementById("hero-preview-2");
+  const n2 = document.getElementById("hero-name-preview-2");
+  if(h2) h2.textContent = currentDuoPartner.emoji||"😀";
+  if(n2) n2.textContent = currentDuoPartner.name||"Partenaire";
+}
 function _renderDuoPartnerWidget(){
+  _updateHero2Display();
   let widget = document.getElementById("duo-partner-widget");
   if(!currentDuoPartner){
     if(widget) widget.remove();
