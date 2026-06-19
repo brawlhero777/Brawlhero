@@ -4116,8 +4116,11 @@ function showBuff(txt){
 function updateHUD(){
   // +1 for the player
   const aliveEnemies=enemies.filter(e=>!e.dead).length;
-  const rem=aliveEnemies+1;
-  const total=totalEnemies+1;
+  const total=totalEnemies+1; // toujours 11 (10 places + joueur local), voir initGame()
+  // Clamp défensif : même si un événement Firebase arrivait en retard sur un
+  // appareil et faisait temporairement gonfler enemies.length au-delà du total
+  // attendu, on n'affiche jamais plus que le total réel de la partie (11).
+  const rem=Math.min(aliveEnemies+1, total);
   document.getElementById("killCount").textContent=rem;
   document.getElementById("enemy-counter-label").textContent=rem+" joueur"+(rem>1?"s":"")+" restant"+(rem>1?"s":"");
   document.getElementById("enemy-counter-bar").style.width=(rem/total*100)+"%";
