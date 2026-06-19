@@ -4077,6 +4077,12 @@ function killEnemy(en){
   if(_audioUnlocked) sfxKill();
   en.dead=true;kills++;
   spawnParticles(en.x,en.y,en.color,10);
+  // MP bots partages : memorise ce bot mort pour que mpBotSyncTick puisse
+  // continuer a pusher dead:true meme apres qu il a ete retire de enemies[].
+  if(window._amBotHost && window._mpBotsShared && typeof en._botSlot==="number" && !en._isRemote){
+    if(!window._mpDeadBotSlots) window._mpDeadBotSlots = {};
+    window._mpDeadBotSlots[en._botSlot] = {x: Math.round(en.x), y: Math.round(en.y), pushCount: 0};
+  }
   // Vibration sur kill
   vibrate(30);
   // Flaque d'élimination
@@ -9193,12 +9199,23 @@ function mpBotSyncTick(dt){
     mpLastBotSync = now;
     if(!mpBotsRef) return;
     const updates = {};
+    // Bots vivants (encore dans enemies)
     for(const en of enemies){
       if(typeof en._botSlot!=="number" || en._isRemote) continue;
       updates[en._botSlot] = {
         x: Math.round(en.x), y: Math.round(en.y),
         hp: Math.round(en.hp), dead: !!en.dead
       };
+    }
+    // Bots morts récemment supprimés de enemies[] par le filtre :
+    // on les garde dans _mpDeadBotSlots quelques syncs pour garantir que
+    // dead:true arrive bien aux autres clients avant qu'on arrête de pousser.
+    if(!window._mpDeadBotSlots) window._mpDeadBotSlots = {};
+    for(const slot in window._mpDeadBotSlots){
+      const entry = window._mpDeadBotSlots[slot];
+      if(!updates[slot]) updates[slot] = {x: entry.x, y: entry.y, hp: 0, dead: true};
+      entry.pushCount = (entry.pushCount||0) + 1;
+      if(entry.pushCount >= 5) delete window._mpDeadBotSlots[slot];
     }
     try{ mpBotsRef.update(updates); }catch(e){}
   } else {
