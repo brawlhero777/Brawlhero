@@ -3139,19 +3139,29 @@ function initGame(){
   rjActive=false;rjId=-1;rjDX=0;rjDY=0;
 
   // Chaque ennemi joue un héros unique de la collection (hors héros du joueur)
+  // IMPORTANT (bots partagés) : ce mélange DOIT être déterministe à partir de la
+  // seed partagée (_seed), pas de Math.random(), sinon chaque téléphone assigne
+  // des héros différents aux bots et leurs stats (hp/dmg/spd) divergent même si
+  // leur état est ensuite synchronisé par position de slot.
+  let _heroSeedState=_seed||1;
+  function _heroSeedRand(){
+    // PRNG déterministe simple (LCG) — même séquence sur tous les clients pour une même seed
+    _heroSeedState=(_heroSeedState*1103515245+12345)&0x7fffffff;
+    return (_heroSeedState%100000)/100000;
+  }
   const playerIdx = selected;
   // Build a pool of ALL hero indices except the player's, shuffled
   let heroPool = heroes.map((_,i)=>i).filter(i=>i!==playerIdx);
-  // Fisher-Yates shuffle
+  // Fisher-Yates shuffle (déterministe)
   for(let i=heroPool.length-1;i>0;i--){
-    const j=Math.floor(Math.random()*(i+1));
+    const j=Math.floor(_heroSeedRand()*(i+1));
     [heroPool[i],heroPool[j]]=[heroPool[j],heroPool[i]];
   }
   // If not enough heroes, extend pool by cycling (but still no adjacent duplicates)
   while(heroPool.length < totalEnemies){
     const extra = heroes.map((_,i)=>i).filter(i=>i!==playerIdx);
     for(let i=extra.length-1;i>0;i--){
-      const j=Math.floor(Math.random()*(i+1));
+      const j=Math.floor(_heroSeedRand()*(i+1));
       [extra[i],extra[j]]=[extra[j],extra[i]];
     }
     // Avoid the last element of heroPool matching the first of extra
@@ -3159,10 +3169,23 @@ function initGame(){
     heroPool=heroPool.concat(extra);
   }
   const assignedHeroes=heroPool.slice(0,totalEnemies);
-  for(let i=0;i<totalEnemies;i++)spawnEnemy(d.level, assignedHeroes[i], i);
+  // MP: si on est en partie multijoueur réelle (Firebase + au moins un autre vrai
+  // joueur), les bots deviennent "partagés" : un seul appareil (le host, slot 0)
+  // simule leur IA ; les autres se contentent d'afficher l'état reçu de Firebase.
+  // Tout le monde crée néanmoins les MÊMES bots (même seed) pour avoir les mêmes
+  // emojis/couleurs/HP de départ affichés, même côté non-host.
+  const _mpBotsShared = (typeof mpRoomId==="string" && !!mpRoomId && typeof fdb!=="undefined" && !!fdb
+    && typeof fakePlayers!=="undefined" && fakePlayers.filter(p=>p&&p.isReal).length>0);
+  window._mpBotsShared = _mpBotsShared;
+  const _amBotHost = _mpBotsShared ? (playerSlot===0) : true; // host simule l'IA des bots
+  window._amBotHost = _amBotHost;
+  for(let i=0;i<totalEnemies;i++)spawnEnemy(d.level, assignedHeroes[i], i, _mpBotsShared && !_amBotHost);
   // MP: spawn one enemy slot per real remote player, driven by Firebase instead of AI.
   // Each remote player counts toward totalEnemies (must be defeated to win).
   if(typeof mpSpawnRemoteEnemies==="function") totalEnemies+=mpSpawnRemoteEnemies(d.level);
+  // MP: si les bots sont partagés, démarre la synchro dédiée (push côté host,
+  // listen côté non-host) une fois que tous les bots existent.
+  if(_mpBotsShared && typeof mpStartBotSync==="function") mpStartBotSync();
   // Caisses : nombre aléatoire entre 4 et 10
   const numCrates=4+Math.floor(Math.random()*7);
   spawnCrates(numCrates);
@@ -3397,7 +3420,7 @@ function drawPowerupHUD(){
   }
 }
 
-function spawnEnemy(level, heroIndex, slotIndex){
+function spawnEnemy(level, heroIndex, slotIndex, isRemoteBot){
   // Utilise les spawn points répartis si disponibles, sinon fallback bords
   let x,y;
   const sp=window._allSpawnPoints;
@@ -3438,7 +3461,17 @@ function spawnEnemy(level, heroIndex, slotIndex){
   t.shootTimer=t.shootCd[0]+Math.random()*(t.shootCd[1]-t.shootCd[0]);
   t._lastHurt=0; // start at 0 so regen delay counts from game start
   t.gems=0;      // gem counter for this bot
-  enemies.push({x,y,...t,dead:false});
+  // BOTS PARTAGÉS : sur les clients non-host, ce bot est purement "affiché" —
+  // son IA (mouvement/tir/dégâts) n'est PAS simulée localement, elle est reçue
+  // depuis Firebase (cf mpStartBotSync). _botSlot identifie ce bot de façon
+  // stable entre tous les appareils (= son slotIndex, indépendant des joueurs).
+  const en={x,y,...t,dead:false};
+  if(typeof slotIndex==='number') en._botSlot=slotIndex;
+  if(isRemoteBot){
+    en._isRemote=true;
+    en._targetX=x; en._targetY=y;
+  }
+  enemies.push(en);
 }
 
 function spawnCrates(n){
@@ -3858,11 +3891,15 @@ function update(dt){
       const dx=b.x-en.x,dy=b.y-en.y;
       if(dx*dx+dy*dy<en.r*en.r){
         const dmg=(playerDmg+gemBonus.dmg);
-        en.hp-=dmg;
-        en._lastHurt=performance.now();
-        en._lastHitBy="player";
+        const isRemoteBot = en._isRemote && typeof en._botSlot==="number";
+        if(!isRemoteBot){
+          // Cas normal (bot simulé localement, ou en solo) : on applique le dégât nous-mêmes.
+          en.hp-=dmg;
+          en._lastHurt=performance.now();
+          en._lastHitBy="player";
+        }
         b.life=0;
-        // Particules d'impact améliorées
+        // Particules d'impact améliorées (feedback visuel immédiat, même pour un bot distant)
         spawnParticles(en.x,en.y,en.color,6);
         spawnImpactBurst(en.x,en.y,en.color);
         if(_audioUnlocked) sfxHitEnemy();
@@ -3870,7 +3907,10 @@ function update(dt){
         const isCrit=Math.random()<0.15;
         spawnDmgNumber(en.x+(Math.random()-0.5)*20, en.y-en.r, isCrit?dmg*1.5:dmg, isCrit?"#f9c74f":en.color, isCrit);
         // MP: if this is a real remote player, tell them they got hit (they own their HP)
-        if(en._isRemote&&typeof mpSendHit==="function") mpSendHit(en._pid,dmg);
+        if(en._isRemote && !isRemoteBot && typeof mpSendHit==="function") mpSendHit(en._pid,dmg);
+        // MP bots partagés : on n'est pas host pour ce bot → on délègue l'arbitrage au host
+        // (qui appliquera le vrai dégât et décidera de la mort) au lieu de le faire nous-mêmes.
+        if(isRemoteBot && typeof mpSendBotHit==="function") mpSendBotHit(en._botSlot, dmg);
         // Super charges on hit — chaque balle = 1 hit
         if(superCooldown>0){
           superCooldown=Math.max(0,superCooldown-1);
@@ -3881,7 +3921,7 @@ function update(dt){
             showBuff(heroes[selected].super.emoji+" SUPER PRÊT !");
           }
         }
-        if(en.hp<=0){
+        if(en.hp<=0 && !isRemoteBot){
           killEnemy(en);
           if(gameRunning&&kills>=totalEnemies){winGame();return;}
         }
@@ -3902,6 +3942,10 @@ function update(dt){
   }
 
   // ---- Enemy bullets vs other enemies (main) + stray hits on player ----
+  // NB bots partagés : ce bloc ne s'exécute en pratique que côté HOST, puisque
+  // les bots non-host (_isRemote) ne tirent jamais (leur IA est skip, voir plus
+  // haut). On garde toutefois isRemoteBot par sécurité pour ne jamais tuer un
+  // bot localement sur un client qui n'en est pas l'autorité.
   outerE: for(let b of bullets){
     if(b.fromPlayer)continue;
     if(b.visualOnly)continue; // tir distant rejoué pour l'affichage uniquement — pas de dégâts (déjà gérés via incomingHits)
@@ -3911,13 +3955,16 @@ function update(dt){
       const dx=b.x-en.x,dy=b.y-en.y;
       if(dx*dx+dy*dy<en.r*en.r){
         const dmg2=(b.dmg||5)*1.8;
-        en.hp-=dmg2;
-        en._lastHurt=performance.now();
-        en._lastHitBy=b.fromEnemy||null;
+        const isRemoteBot2 = en._isRemote && typeof en._botSlot==="number";
+        if(!isRemoteBot2){
+          en.hp-=dmg2;
+          en._lastHurt=performance.now();
+          en._lastHitBy=b.fromEnemy||null;
+        }
         b.life=0;
         spawnParticles(en.x,en.y,en.color,5);
         spawnDmgNumber(en.x+(Math.random()-0.5)*16, en.y-en.r, dmg2, "#ff8888", false);
-        if(en._isRemote&&typeof mpSendHit==="function") mpSendHit(en._pid,dmg2);
+        if(en._isRemote && !isRemoteBot2 && typeof mpSendHit==="function") mpSendHit(en._pid,dmg2);
         if(en.hp<=0){
           if(en._isRemote){
             en.hp=0;
@@ -8802,6 +8849,8 @@ function mpFillRemainingWithBots(joinedCount){
 function mpLeaveRoom(){
   try{
     if(mpHitsRef) mpHitsRef.off();
+    if(mpBotHitsRef) mpBotHitsRef.off();
+    if(mpBotsRef) mpBotsRef.off();
     if(mpPlayersRef){
       for(const pid in mpRemoteEnemies){
         mpPlayersRef.child(pid).child("state").off();
@@ -8811,7 +8860,9 @@ function mpLeaveRoom(){
     }
   }catch(e){}
   mpRoomRef=null;mpPlayersRef=null;mpHitsRef=null;mpRoomId=null;
+  mpBotsRef=null;mpBotHitsRef=null;
   mpRemotePlayers={};mpRemoteEnemies={};mpFinalized=false;mpInGame=false;
+  window._mpBotsShared=false;window._amBotHost=true;
 }
 
 // ===================== IN-GAME REAL-TIME SYNC =====================
@@ -8956,6 +9007,8 @@ function mpSyncTick(dt){
     en.x += (en._targetX-en.x)*lerp;
     en.y += (en._targetY-en.y)*lerp;
   }
+  // Bots partagés : push (host) ou interpolation (non-host)
+  mpBotSyncTick(dt);
   // Throttle our own state push
   const now = performance.now();
   if(now-mpLastSync < MP_SYNC_MS) return;
@@ -8970,6 +9023,139 @@ function mpPushState(dead){
       x: Math.round(playerX), y: Math.round(playerY),
       hp: Math.round(playerHP), maxHp: Math.round(maxHP),
       dead: !!dead
+    });
+  }catch(e){}
+}
+
+// Diffuse un tir (direction normalisée ax,ay) aux autres clients, pour qu'ils
+
+// ===================== BOTS PARTAGÉS (fix classement multi-téléphones) =====================
+// Problème résolu : avant ce fix, chaque téléphone faisait tourner sa PROPRE IA
+// pour les 10 bots (mouvement, tir, dégâts, mort). Même avec une seed de spawn
+// commune, le moindre écart de timing/framerate/réseau faisait diverger l'état
+// des bots entre deux téléphones → le rang final ("aliveEnemies+1") n'était pas
+// le même pour les deux joueurs.
+//
+// Principe du fix : dès qu'au moins un AUTRE vrai joueur est dans la partie,
+// UN SEUL appareil (le host = celui qui a le slot 0) simule l'IA des bots.
+// - Le host calcule l'IA normalement (code de update() inchangé) et publie
+//   périodiquement (x,y,hp,dead) de chaque bot sous lobby/{room}/bots/{botSlot}.
+// - Les autres appareils marquent leurs bots _isRemote=true (déjà géré par
+//   la boucle d'IA qui les ignore, cf "if(en.dead||en._isRemote)continue;"),
+//   et se contentent d'interpoler vers l'état reçu de Firebase.
+// - Quand un non-host touche un bot, il n'applique PAS le dégât localement :
+//   il l'envoie au host via incomingBotHits, et c'est le host (seule source de
+//   vérité) qui décrémente le vrai HP et diffuse le résultat.
+// Limite connue : en solo ou hors-ligne, rien ne change (host de facto, IA 100%
+// locale comme avant) — ce fix ne s'active qu'en vraie partie multijoueur.
+
+// Limite connue : si le HOST meurt ou quitte avant la fin de la partie, il arrête
+// de pousser l'état des bots (gameRunning=false côté host). Les bots se figent
+// alors à leur dernière position connue chez les autres joueurs — il n'y a pas
+// de "migration du rôle host" vers un autre client dans cette passe. C'est un
+// compromis : le classement reste cohérent (basé sur l'état figé partagé), mais
+// la partie peut sembler "geler" légèrement les bots pour les survivants si le
+// host part en premier. Une vraie migration de host serait un chantier séparé.
+let mpBotsRef = null;        // référence Firebase lobby/{room}/bots
+let mpBotHitsRef = null;     // référence incomingBotHits (écoutée seulement par le host)
+let mpLastBotSync = 0;
+const MP_BOT_SYNC_MS = 90;   // même cadence que la sync joueur
+
+function mpStartBotSync(){
+  if(!fdb || !mpRoomId) return;
+  if(!mpRoomRef) mpRoomRef = fdb.ref("lobby").child(mpRoomId);
+  mpBotsRef = mpRoomRef.child("bots");
+
+  if(window._amBotHost){
+    // ---- HOST : nettoie les anciennes données de bots (nouvelle partie) puis
+    // poussera l'état dans mpBotSyncTick(). Écoute aussi les coups que les
+    // AUTRES joueurs disent avoir portés sur les bots, pour les arbitrer ici.
+    try{ mpBotsRef.remove(); }catch(e){}
+    mpBotHitsRef = mpRoomRef.child("incomingBotHits");
+    mpBotHitsRef.on("child_added", snap=>{
+      if(!gameRunning) return;
+      const hit = snap.val();
+      const key = snap.key;
+      mpBotHitsRef.child(key).remove();
+      if(!hit || typeof hit.botSlot!=="number" || !hit.dmg) return;
+      const en = enemies.find(e=>e._botSlot===hit.botSlot && !e._isRemote);
+      if(!en || en.dead) return;
+      en.hp -= hit.dmg;
+      en._lastHurt = performance.now();
+      en._lastHitBy = hit.fromName ? {_fakeName:hit.fromName, emoji:hit.fromEmoji||"❓", dead:false} : "player";
+      spawnParticles(en.x, en.y, en.color, 6);
+      if(en.hp<=0 && !en.dead){
+        killEnemy(en);
+        if(gameRunning && kills>=totalEnemies){ winGame(); }
+      }
+    });
+  } else {
+    // ---- NON-HOST : écoute l'état authoritatif de chaque bot publié par le host.
+    mpBotsRef.on("value", snap=>{
+      const val = snap.val() || {};
+      for(const slotKey in val){
+        const st = val[slotKey];
+        const slot = parseInt(slotKey, 10);
+        const en = enemies.find(e=>e._botSlot===slot);
+        if(!en) continue;
+        if(typeof st.x==="number") en._targetX = st.x;
+        if(typeof st.y==="number") en._targetY = st.y;
+        if(typeof st.hp==="number") en.hp = Math.max(0, Math.min(en.maxHp, st.hp));
+        if(st.dead && !en.dead){
+          en.hp = 0; en.dead = true;
+          // Compte la mort côté non-host aussi (pour le calcul du rang local),
+          // mais sans relancer killEnemy (effets/particules/butin = autorité host).
+          if(gameRunning){
+            kills++;
+            spawnParticles(en.x, en.y, en.color, 10);
+            if(kills>=totalEnemies){ winGame(); }
+          }
+        }
+      }
+    });
+  }
+}
+
+// Appelé depuis mpSyncTick (donc à chaque frame) : pousse l'état des bots si on
+// est host, ou interpole leur position si on est client.
+function mpBotSyncTick(dt){
+  if(!window._mpBotsShared) return;
+  if(window._amBotHost){
+    const now = performance.now();
+    if(now - mpLastBotSync < MP_BOT_SYNC_MS) return;
+    mpLastBotSync = now;
+    if(!mpBotsRef) return;
+    const updates = {};
+    for(const en of enemies){
+      if(typeof en._botSlot!=="number" || en._isRemote) continue;
+      updates[en._botSlot] = {
+        x: Math.round(en.x), y: Math.round(en.y),
+        hp: Math.round(en.hp), dead: !!en.dead
+      };
+    }
+    try{ mpBotsRef.update(updates); }catch(e){}
+  } else {
+    // Interpolation douce vers la dernière position connue, comme pour les vrais joueurs distants
+    for(const en of enemies){
+      if(typeof en._botSlot!=="number" || en.dead) continue;
+      if(typeof en._targetX!=="number") continue;
+      const lerp = Math.min(1, (dt/16)*0.25);
+      en.x += (en._targetX-en.x)*lerp;
+      en.y += (en._targetY-en.y)*lerp;
+    }
+  }
+}
+
+// Appelé à la place des dégâts directs quand un NON-HOST touche un bot
+// (le client ne décide jamais lui-même de la mort d'un bot, il demande au host).
+function mpSendBotHit(botSlot, dmg){
+  if(!fdb || !mpRoomRef || typeof botSlot!=="number") return;
+  try{
+    const myName = (typeof currentAccountName==="function" ? currentAccountName() : null) || "Toi";
+    mpRoomRef.child("incomingBotHits").push({
+      botSlot, dmg: Math.round(dmg*10)/10,
+      fromName: myName, fromEmoji: heroes[selected]?.emoji||"😀",
+      from: mpGetPid(), t: Date.now()
     });
   }catch(e){}
 }
