@@ -3187,7 +3187,6 @@ function initGame(){
   window._mpBotsShared = _mpBotsShared;
   const _amBotHost = _mpBotsShared ? (playerSlot===0) : true; // host simule l'IA des bots
   window._amBotHost = _amBotHost;
-  console.log("[INIT] _mpBotsShared="+_mpBotsShared+" _amBotHost="+_amBotHost+" playerSlot="+playerSlot+" fakePlayersReal="+(typeof fakePlayers!=="undefined" ? fakePlayers.filter(p=>p&&p.isReal).length : "N/A"));
   // IMPORTANT (fix "trop de joueurs") : il y a exactement 11 places au total
   // (1 joueur local + 10 autres). Chacune des 10 places restantes est occupée
   // SOIT par un vrai joueur distant SOIT par un bot IA, jamais les deux. On
@@ -9166,7 +9165,6 @@ function mpStartBotSync(){
       const val = snap.val() || {};
       const deadCount = Object.values(val).filter(s=>s&&s.dead).length;
       const aliveCount = Object.values(val).filter(s=>s&&!s.dead).length;
-      console.log("[NON-HOST] Firebase bots snap: alive="+aliveCount+" dead="+deadCount+" enemies.len="+enemies.length);
       for(const slotKey in val){
         const st = val[slotKey];
         const slot = parseInt(slotKey, 10);
@@ -9339,6 +9337,8 @@ function launchFromMatchmaking() {
 function assignFakeNames() {
   const names = window._fakePlayerNames || [];
   enemies.forEach((en, i) => {
+    // Vrai joueur distant : conserver son vrai nom (déjà défini dans mpSpawnRemoteEnemies)
+    if(en._isRemote && en._fakeName) return;
     const fp = names[i];
     if(fp) {
       en._fakeName = fp.name;
