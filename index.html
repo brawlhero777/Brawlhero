@@ -3041,6 +3041,8 @@ function tryShoot(){
   const maxDist=100+shotR*(150/11);
   bullets.push({x:playerX,y:playerY,vx:ax*10,vy:ay*10,life:1,dist:0,fromPlayer:true,maxDist});
   if(_audioUnlocked) sfxShoot();
+  // MP: prévient les autres vrais joueurs qu'on vient de tirer, pour qu'ils voient la balle
+  if(typeof mpBroadcastShot==="function") mpBroadcastShot(ax,ay);
 }
 
 // ===================== START =====================
@@ -3902,6 +3904,7 @@ function update(dt){
   // ---- Enemy bullets vs other enemies (main) + stray hits on player ----
   outerE: for(let b of bullets){
     if(b.fromPlayer)continue;
+    if(b.visualOnly)continue; // tir distant rejoué pour l'affichage uniquement — pas de dégâts (déjà gérés via incomingHits)
     for(let en of enemies){
       if(en.dead)continue;
       if(b.fromEnemy===en)continue; // don't hit yourself
@@ -8890,6 +8893,15 @@ function mpStartGameSync(){
       if(typeof st.x==="number") en._targetX=st.x;
       if(typeof st.y==="number") en._targetY=st.y;
       if(typeof st.hp==="number") en.hp=Math.max(0,Math.min(en.maxHp,st.hp));
+      // Tir distant : rejoue une balle purement visuelle dans la direction tirée
+      // par le vrai joueur, pour qu'on voie réellement quand il tire.
+      if(st.shot && typeof st.shot.t==="number" && st.shot.t!==en._lastShotT){
+        en._lastShotT=st.shot.t;
+        if(!en.dead && typeof st.shot.ax==="number" && Date.now()-st.shot.t<1500){
+          bullets.push({x:en.x,y:en.y,vx:st.shot.ax*10,vy:st.shot.ay*10,
+            life:1,dist:0,maxDist:350,fromPlayer:false,visualOnly:true,color:en.color});
+        }
+      }
       if(st.dead && !en.dead){
         en.hp=0;en.dead=true;
         if(gameRunning && typeof killEnemy==="function"){
@@ -8958,6 +8970,17 @@ function mpPushState(dead){
       x: Math.round(playerX), y: Math.round(playerY),
       hp: Math.round(playerHP), maxHp: Math.round(maxHP),
       dead: !!dead
+    });
+  }catch(e){}
+}
+
+// Diffuse un tir (direction normalisée ax,ay) aux autres clients, pour qu'ils
+// voient la balle apparaître chez eux quand on tire réellement.
+function mpBroadcastShot(ax, ay){
+  if(!fdb || !mpPlayersRef || !mpInGame) return;
+  try{
+    mpPlayersRef.child(mpGetPid()).child("state").update({
+      shot:{ax:Math.round(ax*100)/100, ay:Math.round(ay*100)/100, t:Date.now()}
     });
   }catch(e){}
 }
