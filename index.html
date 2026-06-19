@@ -9896,23 +9896,47 @@ function _getFriends(){
 function _setFriends(list){
   try{ localStorage.setItem('bh_friends_v1', JSON.stringify(list)); }catch(e){}
 }
-let _friendsPollInterval=null;
+let _friendsUnsubs=[];
+function stopFriendsRealtime(){
+  _friendsUnsubs.forEach(u=>{ try{ u(); }catch(e){} });
+  _friendsUnsubs=[];
+}
+let _friendsRenderDebounce=null;
+function _debouncedRenderFriends(){
+  clearTimeout(_friendsRenderDebounce);
+  _friendsRenderDebounce=setTimeout(renderFriends, 120);
+}
+// Écoute Firestore en temps réel : dès qu'une demande est envoyée, acceptée,
+// ou qu'une amitié est créée/supprimée, on est notifié instantanément (push),
+// au lieu d'attendre un prochain cycle de sondage.
+async function startFriendsRealtime(myCode){
+  stopFriendsRealtime();
+  const ok = await _initFirebase();
+  if(!ok) return;
+  try{
+    const u1=_fbDb.collection("friendRequests").where("toCode","==",myCode).where("status","==","pending")
+      .onSnapshot(()=>_debouncedRenderFriends(), ()=>{});
+    const u2=_fbDb.collection("friendRequests").where("fromCode","==",myCode).where("status","==","accepted")
+      .onSnapshot(()=>_debouncedRenderFriends(), ()=>{});
+    const u3=_fbDb.collection("friendships").where("codeA","==",myCode)
+      .onSnapshot(()=>_debouncedRenderFriends(), ()=>{});
+    const u4=_fbDb.collection("friendships").where("codeB","==",myCode)
+      .onSnapshot(()=>_debouncedRenderFriends(), ()=>{});
+    _friendsUnsubs=[u1,u2,u3,u4];
+  }catch(e){}
+}
 function openFriends(){
   closeAllPanels();
   closeHamburgerMenu();
   document.getElementById('hamburger-btn').style.display='none';
   document.getElementById('panel-friends').style.display='block';
   renderFriends();
-  // Tant que le panneau est ouvert, on revérifie périodiquement : si l'autre
-  // personne vient d'accepter notre demande, on devient amis des DEUX côtés
-  // sans avoir besoin de fermer/rouvrir le panneau.
-  if(_friendsPollInterval) clearInterval(_friendsPollInterval);
-  _friendsPollInterval=setInterval(renderFriends, 3000);
+  ensureFriendCode().then(myCode=>{ if(myCode) startFriendsRealtime(myCode); });
 }
 function closePanelFriends(){
   document.getElementById('panel-friends').style.display='none';
   showHamburgerIfMenu();
-  if(_friendsPollInterval){ clearInterval(_friendsPollInterval); _friendsPollInterval=null; }
+  stopFriendsRealtime();
 }
 // Garde une trace des demandes déjà notifiées comme "acceptées" pour ne pas
 // afficher la même notif en boucle.
@@ -10339,7 +10363,7 @@ window.closeAllPanels=function(){
   const pq=document.getElementById('panel-quests'); if(pq) pq.style.display='none';
   const ps=document.getElementById('panel-season'); if(ps) ps.style.display='none';
   if(typeof _questCdInterval!=='undefined'&&_questCdInterval){clearInterval(_questCdInterval);_questCdInterval=null;}
-  if(typeof _friendsPollInterval!=='undefined'&&_friendsPollInterval){clearInterval(_friendsPollInterval);_friendsPollInterval=null;}
+  if(typeof stopFriendsRealtime==='function') stopFriendsRealtime();
 };
 window.addEventListener("load", ()=>{
   const menu = document.getElementById("menu");
