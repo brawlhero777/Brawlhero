@@ -28,7 +28,7 @@ body{overflow:hidden;background:#1a1a2e;font-family:'Nunito',sans-serif;user-sel
 #hero-name-preview{font-family:'Boogaloo',cursive;font-size:22px;color:#fff;letter-spacing:.5px;background:rgba(0,0,0,.5);border:1.5px solid rgba(255,255,255,.15);border-radius:24px;padding:5px 22px;backdrop-filter:blur(6px);box-shadow:0 2px 12px rgba(0,0,0,.4);}
 
 /* MAP BUTTON — dans la barre en bas */
-#menu-map-btn{
+#menu-mode-btn{
   display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
   width:84px;height:84px;
   border:2.5px solid rgba(76,201,240,.4);
@@ -41,9 +41,9 @@ body{overflow:hidden;background:#1a1a2e;font-family:'Nunito',sans-serif;user-sel
   white-space:nowrap;
   position:static;transform:none;bottom:auto;left:auto;
 }
-#menu-map-btn .map-icon{font-size:28px;line-height:1;}
-#menu-map-btn:hover{background:linear-gradient(160deg,rgba(76,201,240,.28),rgba(76,201,240,.12));transform:translateY(-4px);box-shadow:0 9px 0 rgba(0,40,60,.7),inset 0 1px 0 rgba(76,201,240,.3);}
-#menu-map-btn:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,40,60,.7);}
+#menu-mode-btn .map-icon{font-size:28px;line-height:1;}
+#menu-mode-btn:hover{background:linear-gradient(160deg,rgba(76,201,240,.28),rgba(76,201,240,.12));transform:translateY(-4px);box-shadow:0 9px 0 rgba(0,40,60,.7),inset 0 1px 0 rgba(76,201,240,.3);}
+#menu-mode-btn:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,40,60,.7);}
 
 /* PLAY BUTTON — flottant au-dessus de la barre */
 #menu-play-wrap{display:flex;flex-direction:column;align-items:center;flex-shrink:0;}
@@ -1258,11 +1258,15 @@ canvas{display:block;touch-action:none;}
 
   <!-- JOUER (flottant juste au-dessus de la barre) -->
   <div id="menu-play-wrap" style="position:absolute;bottom:118px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;z-index:3;">
+    <div id="play-rotation-clock" style="display:flex;align-items:center;gap:5px;background:rgba(0,0,0,.5);border:1.5px solid rgba(255,209,102,.4);border-radius:14px;padding:4px 12px;margin-bottom:8px;font-family:'Boogaloo',cursive;font-size:13px;color:#ffd166;backdrop-filter:blur(6px);box-shadow:0 2px 10px rgba(0,0,0,.35);white-space:nowrap;">
+      <span style="font-size:14px;line-height:1;">⏰</span>
+      <span id="play-rotation-countdown">90m 00s</span>
+    </div>
     <button class="btn-play-cr" onclick="openMatchmaking()">
       <span class="play-icon">▶</span>
       <span class="play-label">JOUER</span>
     </button>
-    <div class="play-sublabel">BATTLE ROYALE</div>
+    <div class="play-sublabel" id="play-map-sublabel">🗺️ Herbe</div>
   </div>
 
   <!-- BARRE DE NAVIGATION BAS -->
@@ -1280,10 +1284,10 @@ canvas{display:block;touch-action:none;}
       Pass
     </button>
 
-    <!-- MAP — centre dans la barre -->
-    <button id="menu-map-btn" onclick="openMapPicker()">
-      <span class="map-icon">🗺️</span>
-      <span id="map-name-label">Herbe</span>
+    <!-- MODE — centre dans la barre -->
+    <button id="menu-mode-btn" onclick="openModePicker()">
+      <span class="map-icon">🎮</span>
+      <span id="mode-name-label">Mode</span>
     </button>
 
     <!-- Amis -->
@@ -1455,6 +1459,15 @@ canvas{display:block;touch-action:none;}
   <p style="color:#a0a0c0;font-size:13px;margin-bottom:20px;flex-shrink:0;">Sélectionne l'arène de combat</p>
   <div id="map-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;width:100%;max-width:760px;"></div>
   <button class="btn btn-coll" onclick="closeMapPicker()" style="margin-top:20px;flex-shrink:0;">✖ Fermer</button>
+</div>
+
+<!-- MODE PICKER -->
+<div id="mode-picker" style="display:none;position:fixed;inset:0;background:rgba(5,5,20,.97);backdrop-filter:blur(10px);z-index:500;
+  flex-direction:column;align-items:center;color:#fff;padding:24px 16px;overflow-y:auto;">
+  <h2 style="font-family:'Boogaloo',cursive;font-size:34px;color:#4cc9f0;margin-bottom:4px;flex-shrink:0;">🎮 Choisir un Mode</h2>
+  <p style="color:#a0a0c0;font-size:13px;margin-bottom:20px;flex-shrink:0;">Sélectionne ton mode de jeu</p>
+  <div id="mode-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;width:100%;max-width:760px;"></div>
+  <button class="btn btn-coll" onclick="closeModePicker()" style="margin-top:20px;flex-shrink:0;">✖ Fermer</button>
 </div>
 
 <!-- TROPHY ROAD -->
@@ -7313,13 +7326,22 @@ function refreshSelectedMap(){
   const newMap=MAPS[idx];
   if(newMap.id!==selectedMap.id){
     selectedMap=newMap;
-    const label=document.getElementById("map-name-label");
-    if(label) label.textContent=selectedMap.name;
+    updatePlayMapSublabel();
     if(document.getElementById("map-picker").style.display==="flex") openMapPicker();
   }
+  updatePlayRotationClock();
+}
+function updatePlayMapSublabel(){
+  const sub=document.getElementById("play-map-sublabel");
+  if(sub) sub.textContent=selectedMap.emoji+" "+selectedMap.name;
+}
+function updatePlayRotationClock(){
+  const el=document.getElementById("play-rotation-countdown");
+  if(el) el.textContent=formatRotationCountdown(getMsUntilNextRotation());
 }
 setInterval(refreshSelectedMap,1000);
-document.getElementById("map-name-label").textContent=selectedMap.name;
+updatePlayMapSublabel();
+updatePlayRotationClock();
 
 let _mapPickerCountdownInterval=null;
 function openMapPicker(){
@@ -7371,6 +7393,49 @@ function closeMapPicker(){
   showHamburgerIfMenu();
 }
 
+// ---- ONGLET MODE ----
+const GAME_MODES=[
+  {id:"royale",name:"Battle Royale",emoji:"🏆",desc:"Affronte les autres joueurs, le dernier en vie gagne !",available:true},
+  {id:"duo",name:"Duo",emoji:"👥",desc:"Joue en équipe de 2 contre les autres duos.",available:false},
+  {id:"event",name:"Évènement",emoji:"🎉",desc:"Mode spécial à durée limitée.",available:false},
+];
+let selectedMode=GAME_MODES[0];
+function openModePicker(){
+  const grid=document.getElementById("mode-grid");
+  grid.innerHTML="";
+  GAME_MODES.forEach(mo=>{
+    const card=document.createElement("div");
+    const isActive=mo.id===selectedMode.id;
+    card.style.background=isActive?"linear-gradient(145deg,#1a2a1a,#2a3a2a)":"linear-gradient(145deg,#1a1a3a,#252545)";
+    card.style.border="3px solid "+(isActive?"#a8ff3e":"rgba(255,255,255,.15)");
+    card.style.borderRadius="20px";
+    card.style.padding="18px 16px";
+    card.style.textAlign="center";
+    card.style.transition=".15s";
+    card.style.position="relative";
+    card.style.minHeight="160px";
+    card.style.opacity=mo.available?"1":".5";
+    card.style.cursor=mo.available?"pointer":"default";
+    if(isActive) card.style.boxShadow="0 0 20px rgba(168,255,62,.3)";
+    card.innerHTML=`
+      <div style="font-size:48px;margin-bottom:6px;">${mo.emoji}</div>
+      <div style="font-family:'Boogaloo',cursive;font-size:20px;color:${isActive?"#a8ff3e":"#fff"};margin-bottom:4px;">${mo.name}</div>
+      <div style="font-size:11px;color:#a0a0c0;line-height:1.4;">${mo.desc}</div>
+      ${isActive?`<div style="margin-top:10px;display:inline-block;background:rgba(80,255,120,.2);border:1px solid #50ff78;border-radius:20px;padding:3px 12px;font-family:'Boogaloo',cursive;font-size:12px;color:#a8ff3e;">✔ ACTIVE</div>`:mo.available?`<div style="margin-top:10px;display:inline-block;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:3px 12px;font-size:12px;color:#666;">Sélectionner</div>`:`<div style="margin-top:10px;display:inline-block;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:3px 12px;font-size:12px;color:#666;">🔒 Bientôt</div>`}
+    `;
+    if(mo.available){
+      card.onclick=()=>{selectedMode=mo;openModePicker();};
+    }
+    grid.appendChild(card);
+  });
+  document.getElementById("mode-picker").style.display="flex";
+  document.getElementById("hamburger-btn").style.display="none";
+}
+function closeModePicker(){
+  document.getElementById("mode-picker").style.display="none";
+  showHamburgerIfMenu();
+}
+
 // Expose functions used in HTML onclick attributes
 window.equipBorder=equipBorder;
 window.unequipBorder=unequipBorder;
@@ -7378,6 +7443,8 @@ window.startGame=startGame;
 window.showEndScreen=showEndScreen;
 window.openMapPicker=openMapPicker;
 window.closeMapPicker=closeMapPicker;
+window.openModePicker=openModePicker;
+window.closeModePicker=closeModePicker;
 window.openCollection=openCollection;
 window.closeCollection=closeCollection;
 window.switchCollTab=switchCollTab;
