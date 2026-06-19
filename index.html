@@ -3179,10 +3179,25 @@ function initGame(){
   window._mpBotsShared = _mpBotsShared;
   const _amBotHost = _mpBotsShared ? (playerSlot===0) : true; // host simule l'IA des bots
   window._amBotHost = _amBotHost;
-  for(let i=0;i<totalEnemies;i++)spawnEnemy(d.level, assignedHeroes[i], i, _mpBotsShared && !_amBotHost);
-  // MP: spawn one enemy slot per real remote player, driven by Firebase instead of AI.
-  // Each remote player counts toward totalEnemies (must be defeated to win).
-  if(typeof mpSpawnRemoteEnemies==="function") totalEnemies+=mpSpawnRemoteEnemies(d.level);
+  // IMPORTANT (fix "trop de joueurs") : il y a exactement 11 places au total
+  // (1 joueur local + 10 autres). Chacune des 10 places restantes est occupée
+  // SOIT par un vrai joueur distant SOIT par un bot IA, jamais les deux. On
+  // détermine donc d'abord quels slots (1..10) sont pris par de vrais joueurs
+  // réels avant de créer les bots, pour ne JAMAIS spawner un bot ET un vrai
+  // joueur sur le même slot (ce qui faisait dépasser 11 joueurs en partie et
+  // désynchronisait le décompte des ennemis restants entre les appareils).
+  const _realPlayerSlots = (typeof fakePlayers!=="undefined")
+    ? new Set(fakePlayers.filter(p=>p&&p.isReal&&typeof p._slot==='number').map(p=>p._slot))
+    : new Set();
+  for(let i=0;i<totalEnemies;i++){
+    const _slotNum=i+1; // slot 0 = joueur local, slots 1..10 = les 10 autres
+    if(_realPlayerSlots.has(_slotNum)) continue; // ce slot est un vrai joueur, pas un bot
+    spawnEnemy(d.level, assignedHeroes[i], i, _mpBotsShared && !_amBotHost);
+  }
+  // MP: occupe un slot d'ennemi par vrai joueur distant (piloté par Firebase, pas
+  // par l'IA), en réutilisant les MÊMES slots que ceux exclus ci-dessus — donc le
+  // total reste fixé à 10 (+1 joueur local = 11), jamais plus.
+  if(typeof mpSpawnRemoteEnemies==="function") mpSpawnRemoteEnemies(d.level);
   // MP: si les bots sont partagés, démarre la synchro dédiée (push côté host,
   // listen côté non-host) une fois que tous les bots existent.
   if(_mpBotsShared && typeof mpStartBotSync==="function") mpStartBotSync();
@@ -8872,7 +8887,9 @@ let mpInGame = false;
 const MP_SYNC_MS = 90;      // how often we push our own state to Firebase
 
 // Called from initGame(). Creates one enemy slot per real remote player
-// (driven by Firebase data instead of local AI). Returns the count added.
+// (driven by Firebase data instead of local AI). These slots were already
+// excluded from the AI bot loop above (same slot space, 1..10), so the total
+// stays fixed at 10 enemies + 1 local player = 11, no matter how many are real.
 function mpSpawnRemoteEnemies(level){
   mpRemoteEnemies = {};
   mpInGame = false;
@@ -8908,6 +8925,7 @@ function mpSpawnRemoteEnemies(level){
       y=Math.max(40,Math.min(WORLD_H-40,WORLD_H/2+Math.sin(ang)*rad));
     }
     const en = {x,y,...t,dead:false,_isRemote:true,_pid:p._pid,
+      _botSlot:remoteSlotIdx-1, // même espace de slot que les bots IA (slot-1, slot 0 = joueur local)
       _fakeName:p.name, _fakeTag:p.tag,
       _lastSyncX:x,_lastSyncY:y,_targetX:x,_targetY:y};
     enemies.push(en);
