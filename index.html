@@ -1304,7 +1304,10 @@ canvas{display:block;touch-action:none;}
 
     <!-- Avatar actuel -->
     <div style="text-align:center;margin-bottom:24px;">
-      <div id="prof-avatar-display" style="font-size:80px;line-height:1;filter:drop-shadow(0 4px 20px rgba(249,199,79,.4));"></div>
+      <div style="position:relative;width:fit-content;margin:0 auto;">
+        <div id="prof-border-ring"></div>
+        <div id="prof-avatar-display" style="position:relative;font-size:80px;line-height:1;filter:drop-shadow(0 4px 20px rgba(249,199,79,.4));"></div>
+      </div>
       <div id="prof-name-display" style="font-family:'Boogaloo',cursive;font-size:26px;margin-top:8px;"></div>
       <div id="prof-email-display" style="font-size:12px;color:#606080;margin-top:2px;"></div>
       <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;">
@@ -1343,6 +1346,12 @@ canvas{display:block;touch-action:none;}
     <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:16px 18px;margin-bottom:14px;">
       <div style="font-family:'Boogaloo',cursive;font-size:16px;color:#a0c4ff;margin-bottom:12px;">🎭 Icône de joueur</div>
       <div id="prof-icon-grid" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;"></div>
+    </div>
+
+    <!-- Bordure d'avatar -->
+    <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:16px 18px;margin-bottom:14px;">
+      <div style="font-family:'Boogaloo',cursive;font-size:16px;color:#a0c4ff;margin-bottom:12px;">🔲 Bordure d'avatar</div>
+      <div id="prof-border-grid" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;"></div>
     </div>
 
     <button onclick="closeProfilePanel()" style="width:100%;padding:13px;border:none;border-radius:14px;background:rgba(255,255,255,.1);color:#fff;font-family:'Boogaloo',cursive;font-size:18px;cursor:pointer;border:1px solid rgba(255,255,255,.15);">✖ Fermer</button>
@@ -1790,6 +1799,24 @@ function rollAvatarBorder(){
   return AVATAR_BORDERS[0];
 }
 
+function _buildBorderRingCss(border, size, bw){
+  let css = `
+    display:block;position:absolute;border-radius:50%;pointer-events:none;
+    width:${size};height:${size};
+    top:50%;left:50%;transform:translate(-50%,-52%);
+    border:${bw} solid transparent;
+    background:${border.gradient} border-box;
+    -webkit-mask:linear-gradient(#fff 0 0) padding-box,linear-gradient(#fff 0 0);
+    -webkit-mask-composite:destination-out;mask-composite:exclude;
+    box-shadow:0 0 18px ${border.color}99,inset 0 0 12px ${border.color}44;
+    z-index:0;
+  `;
+  if(border.style==='spin')        css += 'animation:borderSpin 3s linear infinite;';
+  else if(border.style==='pulse')  css += 'animation:borderPulse 1.8s ease-in-out infinite;';
+  else if(border.style==='pulsespin') css += 'animation:borderSpin 4s linear infinite;';
+  else if(border.style==='rainbow')css += 'animation:borderSpin 3s linear infinite, borderRainbow 3s linear infinite;';
+  return css;
+}
 function applyEquippedBorder(){
   const ring = document.getElementById('hero-border-ring');
   if(!ring) return;
@@ -1797,43 +1824,17 @@ function applyEquippedBorder(){
   if(!id){ ring.style.cssText=''; ring.style.display='none'; return; }
   const border = AVATAR_BORDERS.find(b=>b.id===id);
   if(!border){ ring.style.cssText=''; ring.style.display='none'; return; }
-
-  const size = 'min(34vw,170px)';
-  const bw = '5px';
-  let animStyle = '';
-  if(border.style==='spin') animStyle='animation:borderSpin 3s linear infinite;';
-  else if(border.style==='pulse') animStyle='animation:borderPulse 1.8s ease-in-out infinite;';
-  else if(border.style==='pulsespin') animStyle='animation:borderSpin 4s linear infinite, borderPulse 2s ease-in-out infinite;';
-  else if(border.style==='rainbow') animStyle='animation:borderSpin 3s linear infinite, borderRainbow 3s linear infinite;';
-
-  ring.style.cssText=`
-    position:absolute;border-radius:50%;pointer-events:none;
-    width:${size};height:${size};
-    top:50%;left:50%;transform:translate(-50%,-52%);
-    z-index:0;
-    background:conic-gradient(from 0deg, ${border.gradient.replace('linear-gradient(135deg,','').replace(')','')}};
-    -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - ${bw}),#fff calc(100% - ${bw} + 1px));
-    mask:radial-gradient(farthest-side,transparent calc(100% - ${bw}),#fff calc(100% - ${bw} + 1px));
-    box-shadow:0 0 16px ${border.color}88;
-    ${animStyle}
-  `.replace(/\s+/g,' ');
-
-  // Simpler approach: just a glowing ring
-  ring.style.cssText = `
-    display:block;position:absolute;border-radius:50%;pointer-events:none;
-    width:min(36vw,180px);height:min(36vw,180px);
-    top:50%;left:50%;transform:translate(-50%,-52%);
-    border:5px solid transparent;
-    background:${border.gradient} border-box;
-    -webkit-mask:linear-gradient(#fff 0 0) padding-box,linear-gradient(#fff 0 0);
-    -webkit-mask-composite:destination-out;mask-composite:exclude;
-    box-shadow:0 0 18px ${border.color}99,inset 0 0 12px ${border.color}44;
-    z-index:0;
-  `;
-  if(border.style==='spin')        ring.style.animation='borderSpin 3s linear infinite';
-  else if(border.style==='pulse')  ring.style.animation='borderPulse 1.8s ease-in-out infinite';
-  else if(border.style==='pulsespin') ring.style.animation='borderSpin 4s linear infinite';
-  else if(border.style==='rainbow')ring.style.animation='borderSpin 3s linear infinite, borderRainbow 3s linear infinite';
+  ring.style.cssText = _buildBorderRingCss(border, 'min(36vw,180px)', '5px');
+}
+// Anneau de prévisualisation autour de l'avatar dans le panneau Profil
+function applyProfileBorderRing(){
+  const ring = document.getElementById('prof-border-ring');
+  if(!ring) return;
+  const id = _getEquippedBorder();
+  if(!id){ ring.style.cssText='display:none;'; return; }
+  const border = AVATAR_BORDERS.find(b=>b.id===id);
+  if(!border){ ring.style.cssText='display:none;'; return; }
+  ring.style.cssText = _buildBorderRingCss(border, '128px', '4px');
 }
 
 function renderBordersTab(){
@@ -1877,12 +1878,16 @@ function equipBorder(id){
   _setEquippedBorder(id);
   applyEquippedBorder();
   renderBordersTab();
+  applyProfileBorderRing();
+  renderProfileBorderGrid();
   _showBorderToast('✅ Bordure équipée !');
 }
 function unequipBorder(){
   _setEquippedBorder(null);
   applyEquippedBorder();
   renderBordersTab();
+  applyProfileBorderRing();
+  renderProfileBorderGrid();
   _showBorderToast('Bordure retirée');
 }
 function _showBorderToast(msg){
@@ -9525,6 +9530,42 @@ function openProfilePanel(){
     };
     iconGrid.appendChild(btn);
   });
+
+  // Bordure d'avatar : aperçu + sélection parmi les bordures débloquées
+  applyProfileBorderRing();
+  renderProfileBorderGrid();
+}
+
+// Grille de sélection de bordure d'avatar, dans le panneau Profil
+function renderProfileBorderGrid(){
+  const grid = document.getElementById('prof-border-grid');
+  if(!grid) return;
+  const unlocked = _getBordersUnlocked();
+  const equipped = _getEquippedBorder();
+  const unlockedBorders = AVATAR_BORDERS.filter(b => unlocked.includes(b.id));
+
+  // Option "Aucune" pour retirer la bordure
+  const noneActive = !equipped;
+  let html = `<button onclick="unequipBorder()" title="Aucune bordure" style="width:52px;height:52px;border-radius:50%;
+      border:3px solid ${noneActive?"#f9c74f":"rgba(255,255,255,.15)"};
+      background:rgba(255,255,255,.06);color:#888;font-size:20px;cursor:pointer;transition:.15s;
+      display:flex;align-items:center;justify-content:center;">🚫</button>`;
+
+  if(unlockedBorders.length === 0){
+    grid.innerHTML = html + `<div style="width:100%;text-align:center;color:#606080;padding:14px 0 4px;font-size:12px;">Aucune bordure débloquée<br><span style="font-size:11px;">Ouvre des boîtes cosmétiques pour en obtenir !</span></div>`;
+    return;
+  }
+
+  html += unlockedBorders.map(b=>{
+    const isActive = equipped === b.id;
+    const swatchStyle = `width:52px;height:52px;border-radius:50%;border:${isActive?"3px solid #fff":"3px solid transparent"};
+      background:${b.gradient} border-box;
+      box-shadow:${isActive?`0 0 12px ${b.color}cc`:`0 0 6px ${b.color}55`};
+      cursor:pointer;transition:.15s;`;
+    return `<button onclick="equipBorder('${b.id}')" title="${b.name}" style="${swatchStyle}"></button>`;
+  }).join('');
+
+  grid.innerHTML = html;
 }
 
 function copyFriendCode(){
@@ -9866,7 +9907,7 @@ function openFriends(){
   // personne vient d'accepter notre demande, on devient amis des DEUX côtés
   // sans avoir besoin de fermer/rouvrir le panneau.
   if(_friendsPollInterval) clearInterval(_friendsPollInterval);
-  _friendsPollInterval=setInterval(renderFriends, 8000);
+  _friendsPollInterval=setInterval(renderFriends, 3000);
 }
 function closePanelFriends(){
   document.getElementById('panel-friends').style.display='none';
