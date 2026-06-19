@@ -1813,25 +1813,26 @@ function renderBordersTab(){
   const unlocked = _getBordersUnlocked();
   const equipped = _getEquippedBorder();
 
-  grid.innerHTML = AVATAR_BORDERS.map(b=>{
-    const isUnlocked = unlocked.includes(b.id);
+  const unlockedBorders = AVATAR_BORDERS.filter(b => unlocked.includes(b.id));
+
+  if(unlockedBorders.length === 0){
+    grid.innerHTML = '<div style="text-align:center;color:#606080;padding:32px 0;font-size:14px;">Aucune bordure débloquée<br><span style=\'font-size:12px;\'>Ouvre des boîtes cosmétiques pour en obtenir !</span></div>';
+    return;
+  }
+
+  grid.innerHTML = unlockedBorders.map(b=>{
     const isEquipped = equipped === b.id;
     const rc = RARITY_INFO[b.rarity]?.color || '#fff';
     const rl = RARITY_INFO[b.rarity]?.label || b.rarity;
-    // Drop rate approx display
-    const totalW = AVATAR_BORDERS.reduce((s,x)=>s+x.dropWeight,0);
-    const pct = (b.dropWeight/totalW*100).toFixed(1);
 
     // Preview ring swatch
     const previewStyle = `width:52px;height:52px;border-radius:50%;border:5px solid transparent;background:${b.gradient} border-box;-webkit-mask:linear-gradient(#fff 0 0) padding-box,linear-gradient(#fff 0 0);-webkit-mask-composite:destination-out;mask-composite:exclude;box-shadow:0 0 12px ${b.color}88;display:inline-block;`;
 
-    const actionBtn = isUnlocked
-      ? (isEquipped
-        ? `<button onclick="unequipBorder()" style="border:none;background:rgba(255,80,80,.2);color:#ff8888;border:1px solid #ff555555;font-family:'Boogaloo',cursive;font-size:11px;border-radius:8px;padding:4px 10px;cursor:pointer;margin-top:5px;">Retirer</button>`
-        : `<button onclick="equipBorder('${b.id}')" style="border:none;background:rgba(168,255,62,.15);color:#a8ff3e;border:1px solid rgba(168,255,62,.3);font-family:'Boogaloo',cursive;font-size:11px;border-radius:8px;padding:4px 10px;cursor:pointer;margin-top:5px;">Équiper</button>`)
-      : `<div style="font-size:10px;color:#606080;margin-top:5px;">🔒 ${pct}% de chance</div>`;
+    const actionBtn = isEquipped
+      ? `<button onclick="unequipBorder()" style="border:none;background:rgba(255,80,80,.2);color:#ff8888;border:1px solid #ff555555;font-family:'Boogaloo',cursive;font-size:11px;border-radius:8px;padding:4px 10px;cursor:pointer;margin-top:5px;">Retirer</button>`
+      : `<button onclick="equipBorder('${b.id}')" style="border:none;background:rgba(168,255,62,.15);color:#a8ff3e;border:1px solid rgba(168,255,62,.3);font-family:'Boogaloo',cursive;font-size:11px;border-radius:8px;padding:4px 10px;cursor:pointer;margin-top:5px;">Équiper</button>`;
 
-    return `<div class="border-card${isEquipped?' equipped':''}${isUnlocked?'':' locked'}" style="border-color:${isEquipped?rc:isUnlocked?rc+'55':'rgba(255,255,255,.1)'}">
+    return `<div class="border-card${isEquipped?' equipped':''}" style="border-color:${isEquipped?rc:rc+'55'}">
       <div style="font-size:10px;font-family:'Boogaloo',cursive;padding:2px 8px;border-radius:10px;letter-spacing:.5px;text-transform:uppercase;display:inline-block;background:${rc}22;color:${rc};border:1px solid ${rc}55;margin-bottom:6px;">${rl}</div>
       <div class="bc-preview"><span style="${previewStyle}"></span></div>
       <div class="bc-name" style="color:${rc}">${b.name}</div>
@@ -1877,6 +1878,9 @@ function openCosmoBox(){
   const rl = RARITY_INFO[border.rarity]?.label || border.rarity;
   const totalW = AVATAR_BORDERS.reduce((s,b)=>s+b.dropWeight,0);
   const pct = (border.dropWeight/totalW*100).toFixed(1);
+
+  // Réinitialiser l'état de la box pour permettre le tap pour fermer
+  boxClosing=false; boxReady=false; boxPhase=0; boxPendingPearls=0; boxPendingHero=null; boxCb=null;
 
   // Show special reveal overlay (reusing boxOverlay)
   const ov = document.getElementById('boxOverlay');
