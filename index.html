@@ -7290,11 +7290,57 @@ const MAPS=[
     color:"#04040f"
   },
 ];
-let selectedMap=MAPS[0];
+// ---- ROTATION DES MAPS : les 8 maps tournent automatiquement toutes les 1h30 ----
+const MAP_ROTATION_MS = 90*60*1000; // 1h30
+const MAP_ROTATION_EPOCH = 0; // référence fixe (même pour tous les joueurs)
+function getCurrentMapIndex(){
+  return Math.floor((Date.now()-MAP_ROTATION_EPOCH)/MAP_ROTATION_MS) % MAPS.length;
+}
+function getMsUntilNextRotation(){
+  const elapsed=(Date.now()-MAP_ROTATION_EPOCH)%MAP_ROTATION_MS;
+  return MAP_ROTATION_MS-elapsed;
+}
+function formatRotationCountdown(ms){
+  const totalSec=Math.max(0,Math.floor(ms/1000));
+  const h=Math.floor(totalSec/3600);
+  const m=Math.floor((totalSec%3600)/60);
+  const s=totalSec%60;
+  return (h>0?h+"h ":"")+String(m).padStart(2,"0")+"m "+String(s).padStart(2,"0")+"s";
+}
+let selectedMap=MAPS[getCurrentMapIndex()];
+function refreshSelectedMap(){
+  const idx=getCurrentMapIndex();
+  const newMap=MAPS[idx];
+  if(newMap.id!==selectedMap.id){
+    selectedMap=newMap;
+    const label=document.getElementById("map-name-label");
+    if(label) label.textContent=selectedMap.name;
+    if(document.getElementById("map-picker").style.display==="flex") openMapPicker();
+  }
+}
+setInterval(refreshSelectedMap,1000);
+document.getElementById("map-name-label").textContent=selectedMap.name;
 
+let _mapPickerCountdownInterval=null;
 function openMapPicker(){
+  refreshSelectedMap();
   const grid=document.getElementById("map-grid");
   grid.innerHTML="";
+
+  let countdownEl=document.getElementById("map-rotation-countdown");
+  if(!countdownEl){
+    countdownEl=document.createElement("div");
+    countdownEl.id="map-rotation-countdown";
+    countdownEl.style.cssText="font-family:'Boogaloo',cursive;font-size:16px;color:#ffd166;margin-bottom:14px;text-align:center;";
+    document.getElementById("map-picker").insertBefore(countdownEl,grid);
+  }
+  const updateCountdown=()=>{
+    countdownEl.textContent="⏳ Prochaine rotation dans "+formatRotationCountdown(getMsUntilNextRotation());
+  };
+  updateCountdown();
+  if(_mapPickerCountdownInterval) clearInterval(_mapPickerCountdownInterval);
+  _mapPickerCountdownInterval=setInterval(updateCountdown,1000);
+
   MAPS.forEach((m,idx)=>{
     const card=document.createElement("div");
     const isActive=m.id===selectedMap.id;
@@ -7303,20 +7349,17 @@ function openMapPicker(){
     card.style.borderRadius="20px";
     card.style.padding="18px 16px";
     card.style.textAlign="center";
-    card.style.cursor="pointer";
     card.style.transition=".15s";
     card.style.position="relative";
     card.style.minHeight="160px";
+    card.style.opacity=isActive?"1":".55";
     if(isActive) card.style.boxShadow="0 0 20px rgba(168,255,62,.3)";
     card.innerHTML=`
       <div style="font-size:48px;margin-bottom:6px;">${m.emoji}</div>
       <div style="font-family:'Boogaloo',cursive;font-size:20px;color:${isActive?"#a8ff3e":"#fff"};margin-bottom:4px;">${m.name}</div>
       <div style="font-size:11px;color:#a0a0c0;line-height:1.4;">${m.desc}</div>
-      ${isActive?`<div style="margin-top:10px;display:inline-block;background:rgba(80,255,120,.2);border:1px solid #50ff78;border-radius:20px;padding:3px 12px;font-family:'Boogaloo',cursive;font-size:12px;color:#a8ff3e;">✔ ACTIVE</div>`:`<div style="margin-top:10px;display:inline-block;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:3px 12px;font-size:12px;color:#666;">Sélectionner</div>`}
+      ${isActive?`<div style="margin-top:10px;display:inline-block;background:rgba(80,255,120,.2);border:1px solid #50ff78;border-radius:20px;padding:3px 12px;font-family:'Boogaloo',cursive;font-size:12px;color:#a8ff3e;">✔ ACTIVE</div>`:`<div style="margin-top:10px;display:inline-block;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:3px 12px;font-size:12px;color:#666;">🔒 Verrouillée</div>`}
     `;
-    card.onclick=()=>{selectedMap=m;document.getElementById("map-name-label").textContent=m.name;closeMapPicker();};
-    card.onmouseenter=()=>{if(!isActive){card.style.transform="translateY(-3px)";card.style.borderColor="rgba(255,255,255,.4)";}};
-    card.onmouseleave=()=>{card.style.transform="";card.style.borderColor=isActive?"#a8ff3e":"rgba(255,255,255,.15)";};
     grid.appendChild(card);
   });
   document.getElementById("map-picker").style.display="flex";
@@ -7324,6 +7367,7 @@ function openMapPicker(){
 }
 function closeMapPicker(){
   document.getElementById("map-picker").style.display="none";
+  if(_mapPickerCountdownInterval){clearInterval(_mapPickerCountdownInterval);_mapPickerCountdownInterval=null;}
   showHamburgerIfMenu();
 }
 
