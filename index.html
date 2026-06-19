@@ -9172,10 +9172,13 @@ function mpStartBotSync(){
           if(gameRunning){
             kills++;
             spawnParticles(en.x, en.y, en.color, 10);
+            if(typeof updateHUD==="function") updateHUD(); // sync HUD immédiatement
             if(kills>=totalEnemies){ winGame(); }
           }
         }
       }
+      // Mise à jour HUD groupée après traitement de tous les bots (batch Firebase)
+      if(typeof updateHUD==="function") updateHUD();
     });
   }
 }
